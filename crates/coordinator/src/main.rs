@@ -1,15 +1,17 @@
-use igloo_api::igloo::{coordinator_service_server::{CoordinatorService, CoordinatorServiceServer}, WorkerInfo, RegistrationAck, HeartbeatInfo, HeartbeatResponse};
+use chrono::Utc;
+use igloo_api::igloo::{
+    coordinator_service_server::{CoordinatorService, CoordinatorServiceServer},
+    HeartbeatInfo, HeartbeatResponse, RegistrationAck, WorkerInfo,
+};
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tonic::{transport::Server, Request, Response, Status};
-use std::net::SocketAddr;
-use chrono::Utc;
 use tokio::time::{sleep, Duration};
+use tonic::{transport::Server, Request, Response, Status};
 
 #[derive(Debug, Clone)]
 struct WorkerState {
-    info: WorkerInfo,
     last_seen: i64,
 }
 
@@ -21,14 +23,27 @@ struct MyCoordinatorService {
 
 #[tonic::async_trait]
 impl CoordinatorService for MyCoordinatorService {
-    async fn register_worker(&self, request: Request<WorkerInfo>) -> Result<Response<RegistrationAck>, Status> {
+    async fn register_worker(
+        &self,
+        request: Request<WorkerInfo>,
+    ) -> Result<Response<RegistrationAck>, Status> {
         let info = request.into_inner();
         let mut cluster = self.cluster.lock().await;
-        cluster.insert(info.id.clone(), WorkerState { info: info.clone(), last_seen: Utc::now().timestamp() });
+        cluster.insert(
+            info.id.clone(),
+            WorkerState {
+                last_seen: Utc::now().timestamp(),
+            },
+        );
         println!("Registered worker: {} at {}", info.id, info.address);
-        Ok(Response::new(RegistrationAck { message: "Registered".to_string() }))
+        Ok(Response::new(RegistrationAck {
+            message: "Registered".to_string(),
+        }))
     }
-    async fn send_heartbeat(&self, request: Request<HeartbeatInfo>) -> Result<Response<HeartbeatResponse>, Status> {
+    async fn send_heartbeat(
+        &self,
+        request: Request<HeartbeatInfo>,
+    ) -> Result<Response<HeartbeatResponse>, Status> {
         let hb = request.into_inner();
         let mut cluster = self.cluster.lock().await;
         if let Some(worker) = cluster.get_mut(&hb.worker_id) {

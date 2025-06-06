@@ -1,3 +1,4 @@
+#![allow(clippy::doc_overindented_list_items)]
 // TODO: API crate for gRPC and Arrow Flight definitions
 
 // Re-export the generated proto code
