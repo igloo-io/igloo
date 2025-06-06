@@ -37,7 +37,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         loop {
             let heartbeat = HeartbeatInfo { worker_id: worker_id2.clone(), timestamp: chrono::Utc::now().timestamp() };
-            let _ = client2.send_heartbeat(heartbeat).await;
+            if let Err(e) = client2.send_heartbeat(heartbeat).await {
+                println!("Failed to send heartbeat: {}", e);
+                // Optionally, implement retry/backoff here
+            }
             sleep(Duration::from_secs(5)).await;
         }
     });
