@@ -7,3 +7,5 @@ edition = "2021"
 igloo-api = { path = "../../api" }
 tokio = { workspace = true }
 tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }

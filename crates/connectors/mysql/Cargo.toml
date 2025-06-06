@@ -1,8 +1,11 @@
 [package]
-name = "igloo-connectors-mysql"
+name = "igloo-connector-mysql"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 igloo-common = { path = "../../common" }
 tokio = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }

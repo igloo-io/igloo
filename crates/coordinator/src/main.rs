@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
 use std::net::SocketAddr;
 use chrono::Utc;
-use std::time::{Duration, sleep};
+use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Clone)]
 struct WorkerState {

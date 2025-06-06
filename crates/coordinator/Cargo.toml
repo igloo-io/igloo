@@ -9,4 +9,6 @@ igloo-common = { path = "../common" }
 igloo-engine = { path = "../engine" }
 tokio = { workspace = true }
 tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
 chrono = "0.4"

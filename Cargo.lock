@@ -454,6 +454,8 @@ dependencies = [
 name = "igloo-api"
 version = "0.1.0"
 dependencies = [
+ "prost",
+ "prost-types",
  "tokio",
  "tonic",
  "tonic-build",
@@ -464,7 +466,10 @@ name = "igloo-cache"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
+ "prost",
+ "prost-types",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -472,7 +477,10 @@ name = "igloo-cdc"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
+ "prost",
+ "prost-types",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -480,6 +488,8 @@ name = "igloo-client"
 version = "0.1.0"
 dependencies = [
  "igloo-api",
+ "prost",
+ "prost-types",
  "tokio",
  "tonic",
 ]
@@ -488,31 +498,43 @@ dependencies = [
 name = "igloo-common"
 version = "0.1.0"
 dependencies = [
+ "prost",
+ "prost-types",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
-name = "igloo-connectors-filesystem"
+name = "igloo-connector-filesystem"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
+ "prost",
+ "prost-types",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
-name = "igloo-connectors-mysql"
+name = "igloo-connector-mysql"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
+ "prost",
+ "prost-types",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
-name = "igloo-connectors-postgres"
+name = "igloo-connector-postgres"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
+ "prost",
+ "prost-types",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -523,6 +545,8 @@ dependencies = [
  "igloo-api",
  "igloo-common",
  "igloo-engine",
+ "prost",
+ "prost-types",
  "tokio",
  "tonic",
 ]
@@ -532,7 +556,10 @@ name = "igloo-engine"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
+ "prost",
+ "prost-types",
  "tokio",
+ "tonic",
 ]
 
 [[package]]
@@ -542,6 +569,8 @@ dependencies = [
  "chrono",
  "igloo-api",
  "igloo-common",
+ "prost",
+ "prost-types",
  "tokio",
  "tonic",
  "uuid",
@@ -1228,6 +1257,7 @@ version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cf4199d1e5d15ddd86a694e4d0dffa9c323ce759fea589f00fef9d81cc1931d"
 dependencies = [
+ "getrandom 0.3.3",
  "js-sys",
  "wasm-bindgen",
 ]

@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 igloo-common = { path = "../common" }
 tokio = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }

@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 tokio = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }

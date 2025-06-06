@@ -8,5 +8,7 @@ igloo-api = { path = "../../api" }
 igloo-common = { path = "../common" }
 tokio = { workspace = true }
 tonic = { workspace = true }
-uuid = "1"
+prost = { workspace = true }
+prost-types = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
