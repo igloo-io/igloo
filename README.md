@@ -6,6 +6,18 @@ Igloo is a high-performance, distributed SQL query engine built in Rust. It is d
 
 Our mission is to make data access simple, fast, and intelligent. By leveraging an advanced caching layer and a modern, parallel execution engine, Igloo dramatically accelerates data science and analytics workloads.
 
+# Igloo Project Structure
+
+This repository is a Cargo workspace for the Igloo distributed SQL query engine. All core components are implemented as Rust crates under `/crates` and `/api`. Python bindings are under `/python`.
+
+## Building the Workspace
+
+To build all components:
+
+```bash
+cargo build
+```
+
 ---
 
 ### Core Features
@@ -56,7 +68,7 @@ The Workers are the hands of the cluster. Each worker node runs a single `igloo-
 
 ### Repository Structure
 
-This project is a Cargo workspace, making it easy to manage multiple interconnected packages. Here’s a guide to the most important directories:
+This project is a Cargo workspace, making it easy to manage multiple interconnected packages. Here's a guide to the most important directories:
 
 * `/api`: Contains the `.proto` definitions for all network communication. This is the blueprint for how our distributed components talk to each other.
 * `/crates`: Contains all the core Rust source code for Igloo.

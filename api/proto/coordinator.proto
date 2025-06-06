@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package igloo;
+
+import "google/protobuf/empty.proto";
+option java_multiple_files = true;
+option go_package = "github.com/igloo/igloo/api/proto;igloo";
+option csharp_namespace = "Igloo.Api.Proto";
+
+// Worker registration info
+message WorkerInfo {
+  string id = 1;
+  string address = 2;
+}
+
+// Registration acknowledgement
+message RegistrationAck {
+  string message = 1;
+}
+
+// Heartbeat info
+message HeartbeatInfo {
+  string worker_id = 1;
+  int64 timestamp = 2;
+}
+
+// Heartbeat response
+message HeartbeatResponse {
+  bool ok = 1;
+}
+
+// Task definition (serialized plan fragment)
+message TaskDefinition {
+  string task_id = 1;
+  bytes payload = 2;
+}
+
+// Task result (serialized Arrow RecordBatch or similar)
+message TaskResult {
+  string task_id = 1;
+  bytes result = 2;
+}
+
+// Data fetch request for shuffle
+message DataForTaskRequest {
+  string task_id = 1;
+}
+
+// Data fetch response
+message DataForTaskResponse {
+  bytes data = 1;
+}
+
+service CoordinatorService {
+  rpc RegisterWorker(WorkerInfo) returns (RegistrationAck);
+  rpc SendHeartbeat(HeartbeatInfo) returns (HeartbeatResponse);
+}
+
+service WorkerService {
+  rpc ExecuteTask(TaskDefinition) returns (TaskResult);
+  rpc GetDataForTask(DataForTaskRequest) returns (DataForTaskResponse);
+}

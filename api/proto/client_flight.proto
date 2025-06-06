@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package igloo;
+
+import "arrow/flight/protocol/flight.proto";
+option java_multiple_files = true;
+option go_package = "github.com/igloo/igloo/api/proto;igloo";
+option csharp_namespace = "Igloo.Api.Proto";
+
+// Igloo's FlightService delegates to Arrow Flight protocol
+service FlightService {
+  rpc GetFlightInfo(arrow.flight.protocol.FlightInfo) returns (arrow.flight.protocol.FlightInfo);
+  rpc DoGet(arrow.flight.protocol.Ticket) returns (stream arrow.flight.protocol.FlightData);
+}

@@ -1,0 +1,12 @@
+[package]
+name = "igloo-coordinator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+igloo-api = { path = "../../api" }
+igloo-common = { path = "../common" }
+igloo-engine = { path = "../engine" }
+tokio = { workspace = true }
+tonic = { workspace = true }
+chrono = "0.4"

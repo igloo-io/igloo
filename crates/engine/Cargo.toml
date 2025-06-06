@@ -1,0 +1,8 @@
+[package]
+name = "igloo-engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+igloo-common = { path = "../common" }
+tokio = { workspace = true }

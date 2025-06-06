@@ -1,0 +1,12 @@
+[package]
+name = "igloo-worker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+igloo-api = { path = "../../api" }
+igloo-common = { path = "../common" }
+tokio = { workspace = true }
+tonic = { workspace = true }
+uuid = "1"
+chrono = "0.4"

@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    "api",
+    "crates/client",
+    "crates/coordinator",
+    "crates/worker",
+    "crates/engine",
+    "crates/cache",
+    "crates/cdc",
+    "crates/common",
+    "crates/connectors/postgres",
+    "crates/connectors/mysql",
+    "crates/connectors/filesystem"
+]
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+tonic = "0.10" 
