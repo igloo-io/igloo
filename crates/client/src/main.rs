@@ -206,21 +206,23 @@ async fn main() -> Result<()> {
     println!("igloo-client starting up...");
     println!("Attempting to connect to coordinator at {}...", coordinator_address);
 
-    let channel = match Channel::from_shared(coordinator_address.clone()) // Use from_shared for String
-        .unwrap_or_else(|_| {
-            panic!(
-                "Invalid coordinator address format: {}",
-                coordinator_address
-            )
-        })
-        .connect()
-        .await
-    {
+    let endpoint = match Channel::from_shared(coordinator_address.clone()) {
+        Ok(ep) => ep,
+        Err(e) => {
+            eprintln!(
+                "Invalid coordinator address format '{}': {}",
+                coordinator_address, e
+            );
+            return Err(e.into()); // Or a more specific anyhow error
+        }
+    };
+
+    let channel = match endpoint.connect().await {
         Ok(ch) => ch,
         Err(e) => {
-            eprintln!("Failed to connect to coordinator: {}", e);
+            eprintln!("Failed to connect to coordinator at '{}': {}", coordinator_address, e);
             eprintln!(
-                "Please ensure the Igloo coordinator is running at {}.",
+                "Please ensure the Igloo coordinator is running and accessible at {}.",
                 coordinator_address
             );
             return Err(e.into());
