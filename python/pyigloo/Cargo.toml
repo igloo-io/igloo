@@ -1,0 +1,14 @@
+[package]
+name = "pyigloo"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "pyigloo"
+crate-type = ["cdylib"] # For Python extension module
+
+[dependencies]
+pyo3 = { version = "0.20.0", features = ["extension-module"] }
+# igloo-api will be needed later for gRPC client, similar to igloo-client
+# arrow-flight will be needed later
+# pyo3-arrow will be needed later
