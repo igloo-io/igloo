@@ -1,4 +1,5 @@
 // All imports from main.rs, potentially with adjustments if some are main-specific
+// use bincode; // Removed as per clippy suggestion
 use chrono::Utc;
 use igloo_api::igloo::{
     coordinator_service_server::{CoordinatorService, CoordinatorServiceServer},
@@ -7,14 +8,13 @@ use igloo_api::igloo::{
     QueryStatusResponse, RegistrationAck, TaskDefinition, WorkerInfo,
 };
 use std::collections::HashMap;
+use std::error::Error;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::{oneshot, Mutex, MutexGuard};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
 use tonic::{transport::Server, Request, Response, Status};
-use std::error::Error;
-use bincode;
 
 // Struct definitions (WorkerState, QueryInfo)
 #[derive(Debug, Clone)]
@@ -45,10 +45,7 @@ pub type QueryState = Arc<Mutex<HashMap<String, QueryInfo>>>;
 // This function does not need to be public for the integration test's current scope,
 // but if other parts of the library needed it, it could be.
 // For now, keeping it crate-local (no `pub` before `fn`).
-fn create_distributed_plan(
-    query_id: &str,
-    _physical_plan: &[u8],
-) -> Vec<TaskDefinition> {
+fn create_distributed_plan(query_id: &str, _physical_plan: &[u8]) -> Vec<TaskDefinition> {
     let num_tasks = 2;
     let mut tasks = Vec::new();
     for i in 0..num_tasks {
@@ -89,7 +86,10 @@ async fn schedule_and_dispatch_tasks(
     };
 
     if workers.is_empty() {
-        eprintln!("Query {}: No workers available for task dispatch.", query_id);
+        eprintln!(
+            "Query {}: No workers available for task dispatch.",
+            query_id
+        );
         let mut queries_lock = queries_state.lock().await;
         if let Some(qi) = queries_lock.get_mut(&query_id) {
             qi.status = "DispatchFailed_NoWorkers".to_string();
@@ -98,11 +98,9 @@ async fn schedule_and_dispatch_tasks(
     }
 
     let num_workers = workers.len();
-    let mut worker_idx = 0;
 
-    for task in tasks_to_dispatch {
-        let (worker_id, worker_address) = workers[worker_idx % num_workers].clone();
-        worker_idx += 1;
+    for (task_idx, task) in tasks_to_dispatch.into_iter().enumerate() {
+        let (worker_id, worker_address) = workers[task_idx % num_workers].clone();
 
         let full_worker_address = format!("http://{}", worker_address);
         let current_task_id = task.task_id.clone();
@@ -117,7 +115,10 @@ async fn schedule_and_dispatch_tasks(
                 Ok(mut client) => {
                     println!(
                         "Query {}: Dispatching task {} to worker {} at {}",
-                        query_id_clone_for_task, current_task_id, worker_id_clone_for_task, full_worker_address_clone_for_task
+                        query_id_clone_for_task,
+                        current_task_id,
+                        worker_id_clone_for_task,
+                        full_worker_address_clone_for_task
                     );
                     match client.execute_task(Request::new(task)).await {
                         Ok(response_wrapper) => {
@@ -125,7 +126,9 @@ async fn schedule_and_dispatch_tasks(
                             if task_result.success {
                                 println!(
                                     "Query {}: Task {} Succeeded on worker {}",
-                                    query_id_clone_for_task, current_task_id, worker_id_clone_for_task
+                                    query_id_clone_for_task,
+                                    current_task_id,
+                                    worker_id_clone_for_task
                                 );
                                 task_status_update = "Succeeded".to_string();
                             } else {
@@ -139,7 +142,10 @@ async fn schedule_and_dispatch_tasks(
                         Err(e) => {
                             eprintln!(
                                 "Query {}: RPC failed for task {} on worker {}: {:?}",
-                                query_id_clone_for_task, current_task_id, worker_id_clone_for_task, e
+                                query_id_clone_for_task,
+                                current_task_id,
+                                worker_id_clone_for_task,
+                                e
                             );
                             task_status_update = format!("Failed_RpcError_{}", e.code());
                         }
@@ -163,30 +169,41 @@ async fn schedule_and_dispatch_tasks(
 
                 // Check if all tasks are completed and query is not already finished
                 if qi.status != "Finished" {
-                    let all_succeeded = qi.tasks.as_ref().map_or(false, |tasks| {
+                    let all_succeeded = qi.tasks.as_ref().is_some_and(|tasks| {
                         tasks.iter().all(|t| {
-                            qi.task_statuses
-                                .as_ref()
-                                .map_or(false, |s| s.get(&t.task_id).map_or(false, |status| status == "Succeeded"))
+                            qi.task_statuses.as_ref().is_some_and(|s| {
+                                s.get(&t.task_id)
+                                    .is_some_and(|status| status == "Succeeded")
+                            })
                         })
                     });
 
                     if all_succeeded {
-                        println!("Query {}: All tasks succeeded. Marking query as Finished.", query_id_clone_for_task);
+                        println!(
+                            "Query {}: All tasks succeeded. Marking query as Finished.",
+                            query_id_clone_for_task
+                        );
                         qi.status = "Finished".to_string();
                         qi.finished_at = Some(Utc::now().timestamp());
                     } else {
-                        let any_failed = qi.tasks.as_ref().map_or(false, |tasks| {
+                        let any_failed = qi.tasks.as_ref().is_some_and(|tasks| {
                             tasks.iter().any(|t| {
-                                qi.task_statuses
-                                    .as_ref()
-                                    .map_or(false, |s| s.get(&t.task_id).map_or(false, |status| status.starts_with("Failed")))
+                                qi.task_statuses.as_ref().is_some_and(|s| {
+                                    s.get(&t.task_id)
+                                        .is_some_and(|status| status.starts_with("Failed"))
+                                })
                             })
                         });
-                        if any_failed && !qi.status.starts_with("Failed") && !qi.status.starts_with("DispatchFailed") {
-                             println!("Query {}: At least one task failed. Marking query as Failed.", query_id_clone_for_task);
-                             qi.status = "Failed".to_string();
-                             // qi.finished_at = Some(Utc::now().timestamp()); // Optionally set finished_at on failure
+                        if any_failed
+                            && !qi.status.starts_with("Failed")
+                            && !qi.status.starts_with("DispatchFailed")
+                        {
+                            println!(
+                                "Query {}: At least one task failed. Marking query as Failed.",
+                                query_id_clone_for_task
+                            );
+                            qi.status = "Failed".to_string();
+                            // qi.finished_at = Some(Utc::now().timestamp()); // Optionally set finished_at on failure
                         }
                     }
                 }
@@ -194,7 +211,6 @@ async fn schedule_and_dispatch_tasks(
         });
     }
 }
-
 
 // impl CoordinatorService for MyCoordinatorService
 #[tonic::async_trait]
@@ -273,23 +289,36 @@ impl CoordinatorService for MyCoordinatorService {
                 qi.planned_at = Some(Utc::now().timestamp());
                 println!("Query {} physical planning complete (simulated).", query_id);
             } else {
-                eprintln!("Error: Query {} not found for physical planning update.", query_id);
-                return Err(Status::internal(format!("Query {} disappeared before planning", query_id)));
+                eprintln!(
+                    "Error: Query {} not found for physical planning update.",
+                    query_id
+                );
+                return Err(Status::internal(format!(
+                    "Query {} disappeared before planning",
+                    query_id
+                )));
             }
         }
 
         let tasks_for_dispatch = {
             let mut queries_lock = self.queries.lock().await;
             if let Some(qi) = queries_lock.get_mut(&query_id) {
-                let generated_tasks = create_distributed_plan(&query_id, &dummy_physical_plan_bytes);
+                let generated_tasks =
+                    create_distributed_plan(&query_id, &dummy_physical_plan_bytes);
                 qi.tasks = Some(generated_tasks.clone());
                 qi.status = "TasksGenerated".to_string();
                 qi.distributed_plan_created_at = Some(Utc::now().timestamp());
                 println!("Query {} task generation complete (simulated).", query_id);
                 generated_tasks
             } else {
-                eprintln!("Error: Query {} not found for task generation update.", query_id);
-                 return Err(Status::internal(format!("Query {} disappeared before task generation", query_id)));
+                eprintln!(
+                    "Error: Query {} not found for task generation update.",
+                    query_id
+                );
+                return Err(Status::internal(format!(
+                    "Query {} disappeared before task generation",
+                    query_id
+                )));
             }
         };
 
@@ -306,7 +335,10 @@ impl CoordinatorService for MyCoordinatorService {
                     qi.task_statuses = Some(HashMap::new());
                     println!("Query {}: Status set to Dispatching.", q_id_clone);
                 } else {
-                     eprintln!("Query {}: Not found when trying to set status to Dispatching.", q_id_clone);
+                    eprintln!(
+                        "Query {}: Not found when trying to set status to Dispatching.",
+                        q_id_clone
+                    );
                     return;
                 }
             }

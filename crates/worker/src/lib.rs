@@ -1,18 +1,19 @@
+use bincode;
 use igloo_api::igloo::{
     coordinator_service_client::CoordinatorServiceClient,
     worker_service_server::{WorkerService, WorkerServiceServer},
     DataForTaskRequest, DataForTaskResponse, HeartbeatInfo, TaskDefinition, TaskResult, WorkerInfo,
 };
+use std::error::Error;
 use std::net::SocketAddr;
 use tokio::sync::oneshot;
 use tokio::time::{sleep, Duration};
-use tonic::{transport::Server, Request, Response, Status};
-use bincode;
-use std::error::Error; // For Box<dyn Error>
+use tonic::{transport::Server, Request, Response, Status}; // For Box<dyn Error>
 
 // MyWorkerService struct and its implementation
 #[derive(Debug)] // Added Debug for MyWorkerService
-pub struct MyWorkerService { // Made public
+pub struct MyWorkerService {
+    // Made public
     pub worker_id: String, // Made public
 }
 
@@ -79,20 +80,65 @@ pub async fn run_worker_server(
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     // Register with coordinator
     // It's important to handle connection errors here more gracefully for a robust worker.
-    match CoordinatorServiceClient::connect(coordinator_addr.clone()).await {
-        Ok(mut client) => {
-            let info = WorkerInfo {
-                id: worker_id.clone(),
-                address: format!("{}", worker_addr),
-            };
-            if let Err(e) = client.register_worker(info).await {
-                 eprintln!("Worker {} failed to register with coordinator at {}: {}", worker_id, coordinator_addr, e);
-                 // Decide if this is a fatal error for the worker
-                 return Err(Box::new(e)); // Example: exit if registration fails
-            }
-            println!("Worker {} registered with coordinator at {}", worker_id, coordinator_addr);
 
-            // Spawn heartbeat task
+    const MAX_REGISTRATION_RETRIES: usize = 5;
+    const REGISTRATION_RETRY_DELAY_SECS: u64 = 2;
+    let mut registration_retry_count = 0;
+
+    let mut client = loop {
+        match CoordinatorServiceClient::connect(coordinator_addr.clone()).await {
+            Ok(c) => break c,
+            Err(e) => {
+                registration_retry_count += 1;
+                eprintln!(
+                    "Worker {}: Failed to connect to coordinator (attempt {}/{}): {}. Retrying in {}s...",
+                    worker_id, registration_retry_count, MAX_REGISTRATION_RETRIES, e, REGISTRATION_RETRY_DELAY_SECS
+                );
+                if registration_retry_count >= MAX_REGISTRATION_RETRIES {
+                    return Err(format!(
+                        "Worker {} failed to connect to coordinator after {} attempts",
+                        worker_id, MAX_REGISTRATION_RETRIES
+                    )
+                    .into());
+                }
+                sleep(Duration::from_secs(REGISTRATION_RETRY_DELAY_SECS)).await;
+            }
+        }
+    };
+
+    registration_retry_count = 0; // Reset for registration attempts
+    loop {
+        let info = WorkerInfo {
+            id: worker_id.clone(),
+            address: format!("{}", worker_addr),
+        };
+        match client.register_worker(info.clone()).await {
+            Ok(_) => {
+                println!(
+                    "Worker {} registered successfully with coordinator at {}",
+                    worker_id, coordinator_addr
+                );
+                break; // Successfully registered
+            }
+            Err(e) => {
+                registration_retry_count += 1;
+                eprintln!(
+                    "Worker {} failed registration attempt {}/{}: {}. Retrying in {}s...",
+                    worker_id, registration_retry_count, MAX_REGISTRATION_RETRIES, e, REGISTRATION_RETRY_DELAY_SECS
+                );
+                if registration_retry_count >= MAX_REGISTRATION_RETRIES {
+                    return Err(format!(
+                        "Worker {} failed to register after {} attempts",
+                        worker_id, MAX_REGISTRATION_RETRIES
+                    )
+                    .into());
+                }
+                sleep(Duration::from_secs(REGISTRATION_RETRY_DELAY_SECS)).await;
+            }
+        }
+    }
+
+    // Spawn heartbeat task
             // Clone client for heartbeat task. Consider a more robust client management strategy for long-running apps.
             let mut heartbeat_client = client; // Use the same client, or .clone() if connect returns a clonable client wrapper
             let hb_worker_id = worker_id.clone();
@@ -116,7 +162,10 @@ pub async fn run_worker_server(
                         match CoordinatorServiceClient::connect(coordinator_addr.clone()).await {
                             Ok(new_client) => heartbeat_client = new_client,
                             Err(reconnect_err) => {
-                                eprintln!("Worker {}: Failed to reconnect coordinator for heartbeat: {}", hb_worker_id, reconnect_err);
+                                eprintln!(
+                                    "Worker {}: Failed to reconnect coordinator for heartbeat: {}",
+                                    hb_worker_id, reconnect_err
+                                );
                                 // Sleep before retrying connection to avoid tight loop on persistent error
                                 sleep(Duration::from_secs(5)).await;
                                 continue; // Skip this heartbeat attempt
@@ -127,25 +176,26 @@ pub async fn run_worker_server(
                 }
             });
 
-
-            println!("Worker {} gRPC server starting on {}...", worker_id, worker_addr);
+            println!(
+                "Worker {} gRPC server starting on {}...",
+                worker_id, worker_addr
+            );
             Server::builder()
                 .add_service(WorkerServiceServer::new(MyWorkerService {
                     worker_id: worker_id.clone(),
                 }))
                 .serve_with_shutdown(worker_addr, async {
                     shutdown_signal.await.ok();
-                    println!("Worker {} received shutdown signal, shutting down.", worker_id);
+                    println!(
+                        "Worker {} received shutdown signal, shutting down.",
+                        worker_id
+                    );
                 })
                 .await?;
 
             // heartbeat_task.abort(); // Abort heartbeat on shutdown
             Ok(())
-
-        }
-        Err(e) => {
-            eprintln!("Worker {} failed to connect to coordinator at {}: {}", worker_id, coordinator_addr, e);
-            Err(Box::new(e))
-        }
-    }
+        // This Err case for initial connect is now handled by the loop above
+        // However, the client for heartbeat could also fail.
+        // The heartbeat loop already has a reconnect attempt.
 }
