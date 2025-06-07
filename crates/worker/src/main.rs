@@ -69,11 +69,7 @@ async fn main() -> Result<(), WorkerError> {
                 .await
                 .map_err(|e_original| {
                     let worker_error = WorkerError::ClientConnection(e_original);
-                    eprintln!(
-                        "Failed to connect to coordinator: {}. Retrying... Source Error: {:?}",
-                        worker_error,
-                        worker_error.source()
-                    );
+                    eprintln!("Failed to connect to coordinator: {}. Retrying...", worker_error);
                     backoff::Error::transient(worker_error)
                 })
         }
@@ -107,12 +103,7 @@ async fn main() -> Result<(), WorkerError> {
                 .await
                 .map_err(|e_original| {
                     let worker_error = WorkerError::RpcError(e_original);
-                    eprintln!(
-                        "Failed to register worker {}: {}. Retrying... Source Error: {:?}",
-                        info_for_retry.id,
-                        worker_error,
-                        worker_error.source()
-                    );
+                    eprintln!("Failed to register worker {}: {}. Retrying...", info_for_retry.id, worker_error);
                     backoff::Error::transient(worker_error)
                 })
         }
@@ -141,45 +132,19 @@ async fn main() -> Result<(), WorkerError> {
                 Err(e) => { // e is tonic::Status
                     let rpc_error = WorkerError::RpcError(e);
                     eprintln!(
-                        "Failed to send heartbeat for worker {}. Error: {}. Attempting to reconnect...",
+                        "Failed to send heartbeat for worker {}. Error: {}. Attempting to reconnect once...",
                         worker_id_for_heartbeat, rpc_error
                     );
 
-                    // Configure backoff for reconnection attempts
-                    let reconnect_backoff_settings = ExponentialBackoff {
-                        max_elapsed_time: Some(StdDuration::from_secs(30)), // Shorter timeout for heartbeat reconnects
-                        randomization_factor: 0.2,
-                        ..ExponentialBackoff::default()
-                    };
-
-                    let coordinator_addr_for_reconnect = heartbeat_coordinator_addr.clone(); // Clone for the retry closure
-
-                    match retry(reconnect_backoff_settings, || {
-                        println!(
-                            "Heartbeat Reconnect Attempt for worker {} to coordinator at {}...",
-                            worker_id_for_heartbeat, coordinator_addr_for_reconnect
-                        );
-                        let addr_clone_inner = coordinator_addr_for_reconnect.clone(); // Clone for the async move block
-                        async move {
-                            CoordinatorServiceClient::connect(addr_clone_inner)
-                                .await
-                                .map_err(|e_original| {
-                                    let conn_err = WorkerError::ClientConnection(e_original);
-                                    eprintln!(
-                                        "Heartbeat reconnect attempt failed for worker {}: {}. Retrying... Source Error: {:?}",
-                                        worker_id_for_heartbeat, conn_err, conn_err.source()
-                                    );
-                                    backoff::Error::transient(conn_err)
-                                })
-                        }
-                    }).await {
+                    // Attempt to reconnect the heartbeat client *once*.
+                    match CoordinatorServiceClient::connect(heartbeat_coordinator_addr.clone()).await {
                         Ok(new_client) => {
                             heartbeat_client = new_client;
-                            println!(
+                            println!( // Changed from eprintln to println for successful reconnect
                                 "Successfully reconnected heartbeat client for worker {}.",
                                 worker_id_for_heartbeat
                             );
-                            // Attempt to send heartbeat immediately after successful reconnect
+                            // Optional: Attempt to send heartbeat immediately after successful reconnect, ONCE.
                             let immediate_heartbeat_info = HeartbeatInfo {
                                 worker_id: worker_id_for_heartbeat.clone(),
                                 timestamp: chrono::Utc::now().timestamp(),
@@ -194,10 +159,11 @@ async fn main() -> Result<(), WorkerError> {
                                 println!("Successfully sent immediate heartbeat for worker {} after reconnect.", worker_id_for_heartbeat);
                             }
                         }
-                        Err(final_reconnect_err) => { // final_reconnect_err is WorkerError::ClientConnection
+                        Err(reconnect_err_original) => {
+                            let conn_err = WorkerError::ClientConnection(reconnect_err_original);
                             eprintln!(
-                                "Failed to reconnect heartbeat client for worker {} after multiple retries. Error: {}. Source: {:?}",
-                                worker_id_for_heartbeat, final_reconnect_err, final_reconnect_err.source()
+                                "Failed to reconnect heartbeat client for worker {}. Error: {}. Will retry on next cycle.",
+                                worker_id_for_heartbeat, conn_err
                             );
                             // Client remains the old, likely broken one. Loop will continue, and try full sequence again on next cycle.
                         }
