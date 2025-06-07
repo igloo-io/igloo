@@ -8,7 +8,7 @@ use igloo_api::arrow::flight::protocol::{FlightInfo, Ticket};
 use igloo_api::igloo::{
     igloo_client_flight_service_client::IglooClientFlightServiceClient, CommandSql,
 };
-use prettytable::{Cell, Row, Table, format::Alignment};
+use prettytable::{format::Alignment, Cell, Row, Table}; // Added Alignment
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::io::Cursor;
@@ -98,7 +98,11 @@ async fn execute_query(
         match read_schema(&mut cursor, &IpcReadOptions::default()) {
             Ok(s) => Arc::new(s),
             Err(e) => {
-                eprintln!("Failed to deserialize schema from FlightInfo: {}. Schema bytes length: {}", e, flight_info_response.schema.len());
+                eprintln!(
+                    "Failed to deserialize schema from FlightInfo: {}. Schema bytes length: {}",
+                    e,
+                    flight_info_response.schema.len()
+                );
                 return Err(anyhow::anyhow!("Schema deserialization failed: {}", e));
             }
         }
@@ -203,14 +207,22 @@ async fn main() -> Result<()> {
     println!("Attempting to connect to coordinator at {}...", coordinator_address);
 
     let channel = match Channel::from_shared(coordinator_address.clone()) // Use from_shared for String
-        .unwrap_or_else(|_| panic!("Invalid coordinator address format: {}", coordinator_address))
+        .unwrap_or_else(|_| {
+            panic!(
+                "Invalid coordinator address format: {}",
+                coordinator_address
+            )
+        })
         .connect()
         .await
     {
         Ok(ch) => ch,
         Err(e) => {
             eprintln!("Failed to connect to coordinator: {}", e);
-            eprintln!("Please ensure the Igloo coordinator is running at {}.", coordinator_address);
+            eprintln!(
+                "Please ensure the Igloo coordinator is running at {}.",
+                coordinator_address
+            );
             return Err(e.into());
         }
     };
