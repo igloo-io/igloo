@@ -45,13 +45,9 @@ mod tests {
 
     #[test]
     fn test_parse_invalid_sql() {
-        let sql = "SELECT ((FROM table"; // Clearly invalid SQL
+        let sql = "SELECT ((FROM table"; // Invalid SQL
         let result = parse_sql(sql);
-        // Optional: print if it unexpectedly succeeds, for debugging.
-        // if result.is_ok() {
-        //     eprintln!("Unexpected success for 'SELECT ((FROM table': {:?}", result.as_ref().unwrap());
-        // }
-        assert!(result.is_err(), "Should return an error for 'SELECT ((FROM table'");
+        assert!(result.is_err(), "Should return an error for malformed SQL");
     }
 
     #[test]

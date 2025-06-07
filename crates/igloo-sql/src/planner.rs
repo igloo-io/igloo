@@ -167,7 +167,8 @@ mod tests {
          let statements = parse_sql(sql).expect("Failed to parse SQL");
         let planner = Planner::new();
         let plan_result = planner.plan_query(&statements[0]);
-        assert!(matches!(plan_result, Err(PlanningError::UnsupportedQuery(_))));
+        assert!(matches!(plan_result, Err(PlanningError::UnsupportedQuery(_))),
+                "Expected UnsupportedQuery error for UNION operations");
     }
 
     #[test]
@@ -216,42 +217,22 @@ mod tests {
 
         match plan_result {
             Ok(LogicalPlan::Filter { input, predicate }) => {
-                // Check input (should be TableScan)
-                match &*input {
-                    LogicalPlan::TableScan { table_name } => {
-                        assert_eq!(table_name, "my_table", "Table name in TableScan is incorrect");
-                    }
-                    _ => panic!("Input to Filter was not a TableScan, got {:?}", input),
-                }
+                // Check the input of the Filter
+                assert!(matches!(*input, LogicalPlan::TableScan { ref table_name, .. } if table_name == "my_table"), "Input to filter should be TableScan for 'my_table'");
 
-                // Check predicate
+                // Check the predicate
                 match predicate {
                     Expression::BinaryExpr { left, op, right } => {
-                        assert_eq!(op, Operator::Gt, "Operator in predicate is incorrect");
-                        // Check left operand
-                        match &*left {
-                            Expression::Column(name) => {
-                                assert_eq!(name, "b", "Column name in left operand is incorrect");
-                            }
-                            _ => panic!("Left operand was not a Column, got {:?}", left),
-                        }
-                        // Check right operand
-                        match &*right {
-                            Expression::Literal(val) => {
-                                assert_eq!(val, "10", "Literal value in right operand is incorrect");
-                            }
-                            _ => panic!("Right operand was not a Literal, got {:?}", right),
-                        }
+                        assert_eq!(op, Operator::Gt, "Expected '>' operator");
+                        // Ensure we are comparing the correct Expression variants
+                        assert_eq!(*left, Expression::Column("b".to_string()), "Expected column 'b'");
+                        assert_eq!(*right, Expression::Literal("10".to_string()), "Expected literal '10'");
                     }
-                    _ => panic!("Predicate was not a BinaryExpr, got {:?}", predicate),
+                    _ => panic!("Unexpected predicate format: {:?}", predicate),
                 }
             }
-            Ok(other_plan) => {
-                panic!("Expected Filter plan, got {:?}", other_plan);
-            }
-            Err(e) => {
-                panic!("Planning failed for SELECT with WHERE: {:?}", e);
-            }
+            Err(e) => panic!("Failed to plan query: {:?}", e),
+            Ok(other_plan) => panic!("Unexpected plan format: {:?}", other_plan),
         }
     }
 
@@ -263,16 +244,34 @@ mod tests {
         let plan = planner.plan_query(&statements[0]).expect("Planning failed");
 
         match plan {
-            LogicalPlan::Filter { predicate, .. } => {
+            LogicalPlan::Filter { input, predicate } => {
+                assert!(matches!(*input, LogicalPlan::TableScan { ref table_name, .. } if table_name == "users"), "Input should be TableScan for 'users'");
                 match predicate {
-                    Expression::BinaryExpr { op, .. } => {
-                        assert_eq!(op, Operator::And);
-                        // Further checks for left and right sides of AND can be added here
+                    Expression::BinaryExpr { left, op, right } => {
+                        assert_eq!(op, Operator::And, "Expected AND operator");
+                        // Check left side of AND: id = 1
+                        match &*left {
+                            Expression::BinaryExpr {left: l_left, op: l_op, right: l_right} => {
+                                assert_eq!(*l_op, Operator::Eq, "Expected = operator for id = 1");
+                                assert_eq!(**l_left, Expression::Column("id".to_string()), "Expected column 'id'");
+                                assert_eq!(**l_right, Expression::Literal("1".to_string()), "Expected literal '1'");
+                            }
+                            _ => panic!("Left side of AND was not a BinaryExpr: {:?}", left),
+                        }
+                        // Check right side of AND: active = 'true'
+                        match &*right {
+                            Expression::BinaryExpr {left: r_left, op: r_op, right: r_right} => {
+                                assert_eq!(*r_op, Operator::Eq, "Expected = operator for active = 'true'");
+                                assert_eq!(**r_left, Expression::Column("active".to_string()), "Expected column 'active'");
+                                assert_eq!(**r_right, Expression::Literal("true".to_string()), "Expected literal 'true'");
+                            }
+                            _ => panic!("Right side of AND was not a BinaryExpr: {:?}", right),
+                        }
                     }
-                    _ => panic!("Expected top-level predicate to be AND BinaryExpr"),
+                    _ => panic!("Expected top-level predicate to be AND BinaryExpr, got {:?}", predicate),
                 }
             }
-            _ => panic!("Expected a Filter plan"),
+            _ => panic!("Expected a Filter plan, got {:?}", plan),
         }
     }
 
@@ -284,18 +283,18 @@ mod tests {
         let plan = planner.plan_query(&statements[0]).expect("Planning failed");
 
         match plan {
-            LogicalPlan::Filter { predicate, .. } => {
-                 match predicate {
-                    Expression::BinaryExpr { right, ..} => {
-                        match &*right {
-                            Expression::Literal(val) => assert_eq!(val, "active"),
-                            _ => panic!("Expected literal string 'active'"),
-                        }
-                    },
-                    _ => panic!("Expected BinaryExpr for predicate"),
-                 }
+            LogicalPlan::Filter { input, predicate } => {
+                assert!(matches!(*input, LogicalPlan::TableScan { ref table_name, .. } if table_name == "users"), "Input should be TableScan for 'users'");
+                match predicate {
+                    Expression::BinaryExpr { left, op, right } => {
+                        assert_eq!(op, Operator::Eq, "Expected = operator");
+                        assert_eq!(*left, Expression::Column("status".to_string()), "Expected column 'status'");
+                        assert_eq!(*right, Expression::Literal("active".to_string()), "Expected literal 'active'");
+                    }
+                    _ => panic!("Expected predicate to be BinaryExpr, got {:?}", predicate),
+                }
             }
-            _ => panic!("Expected a Filter plan"),
+            _ => panic!("Expected a Filter plan, got {:?}", plan),
         }
     }
 
