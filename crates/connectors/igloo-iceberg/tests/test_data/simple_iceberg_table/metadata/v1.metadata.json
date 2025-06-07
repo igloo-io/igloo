@@ -1,0 +1,33 @@
+{
+  "format-version": 1,
+  "table-uuid": "07b13196-7c4e-4c6c-8f98-87ce81593a0a",
+  "location": "file:///tests/test_data/simple_iceberg_table",
+  "last-updated-ms": 1678886400000,
+  "last-column-id": 2,
+  "schemas": [
+    {
+      "type": "struct",
+      "schema-id": 0,
+      "fields": [
+        { "id": 1, "name": "id", "required": false, "type": "int" },
+        { "id": 2, "name": "data", "required": false, "type": "string" }
+      ]
+    }
+  ],
+  "current-schema-id": 0,
+  "partition-specs": [],
+  "default-spec-id": 0,
+  "last-partition-id": 0,
+  "properties": {},
+  "snapshots": [
+    {
+      "snapshot-id": 100,
+      "timestamp-ms": 1678886400000,
+      "summary": { "operation": "append", "total-data-files": "1", "total-records": "3" },
+      "manifest-list": "file:///tests/test_data/simple_iceberg_table/metadata/snap-100-1-manifest-list.avro"
+    }
+  ],
+  "current-snapshot-id": 100,
+  "snapshot-log": [],
+  "metadata-log": []
+}
