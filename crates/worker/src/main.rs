@@ -51,39 +51,52 @@ async fn main() -> Result<(), WorkerError> {
     // let coordinator_addr = settings.coordinator_address.clone(); // Keep for reference if needed, but new logic clones settings.coordinator_address
 
     // Register with coordinator
-    let coordinator_address_clone_for_connect = settings.coordinator_address.clone();
-    let worker_id_clone_for_register = worker_id.clone();
-    let worker_addr_str_for_register = settings.worker_server_address()?.to_string();
+    // Note: worker_id_clone_for_register and worker_addr_str_for_register are effectively replaced by direct use or re-creation.
 
-    let mut client = retry(ExponentialBackoff::default(), || async {
-        println!("Attempting to connect to coordinator at {}...", coordinator_address_clone_for_connect);
-        CoordinatorServiceClient::connect(coordinator_address_clone_for_connect.clone())
-            .await
-            .map_err(|e| {
-                eprintln!("Failed to connect to coordinator: {}. Retrying...", e);
-                backoff::Error::transient(WorkerError::ClientConnection(e))
-            })
-    }).await.map_err(|e| {
+    let mut client = retry(ExponentialBackoff::default(), || {
+        println!("Attempting to connect to coordinator at {}...", settings.coordinator_address);
+        let coordinator_address_clone = settings.coordinator_address.clone();
+        async move {
+            CoordinatorServiceClient::connect(coordinator_address_clone)
+                .await
+                .map_err(|e| {
+                    let worker_error = WorkerError::ClientConnection(e);
+                    eprintln!("Failed to connect to coordinator: {}. Retrying...", worker_error);
+                    backoff::Error::transient(worker_error)
+                })
+        }
+    })
+    .await
+    .map_err(|e| {
         eprintln!("Failed to connect to coordinator after multiple retries: {}", e);
         WorkerError::ConnectionFailed
     })?;
     println!("Successfully connected to coordinator at {}", settings.coordinator_address);
 
-    let info = WorkerInfo {
-        id: worker_id_clone_for_register.clone(),
-        address: worker_addr_str_for_register,
+    let info_for_retry = WorkerInfo {
+        id: worker_id.clone(),
+        address: settings.worker_server_address()
+                       .expect("Invalid worker server address for registration info") // expect is fine here as main returns Result
+                       .to_string(),
     };
 
-    retry(ExponentialBackoff::default(), || async {
-        println!("Attempting to register worker {}...", info.id);
+    retry(ExponentialBackoff::default(), || {
+        println!("Attempting to register worker {}...", info_for_retry.id);
         let mut temp_client = client.clone();
-        temp_client.register_worker(Request::new(info.clone())).await
-            .map_err(|e| {
-                eprintln!("Failed to register worker {}: {}. Retrying...", info.id, e);
-                backoff::Error::transient(WorkerError::RpcError(e))
-            })
-    }).await.map_err(|e| {
-        eprintln!("Failed to register worker {} after multiple retries: {}", info.id, e);
+        let current_info = info_for_retry.clone();
+        async move {
+            temp_client.register_worker(Request::new(current_info))
+                .await
+                .map_err(|e| {
+                    let worker_error = WorkerError::RpcError(e);
+                    eprintln!("Failed to register worker {}: {}. Retrying...", info_for_retry.id, worker_error);
+                    backoff::Error::transient(worker_error)
+                })
+        }
+    })
+    .await
+    .map_err(|e| {
+        eprintln!("Failed to register worker {} after multiple retries: {}", info_for_retry.id, e);
         WorkerError::RegistrationFailed
     })?;
     println!("Worker {} registered successfully with coordinator.", worker_id);
@@ -102,15 +115,40 @@ async fn main() -> Result<(), WorkerError> {
             };
             match heartbeat_client.send_heartbeat(Request::new(heartbeat_info.clone())).await {
                 Ok(_) => println!("Sent heartbeat for worker {}", worker_id_for_heartbeat),
-                Err(e) => { // e is tonic::Status
-                    eprintln!("Failed to send heartbeat for worker {}: {}. Attempting to reconnect and resend...", worker_id_for_heartbeat, WorkerError::RpcError(e));
+                Err(e) => {
+                    eprintln!(
+                        "Failed to send heartbeat for worker {}: {}. Attempting to reconnect...",
+                        worker_id_for_heartbeat, e // e is tonic::Status, will display via its Display trait
+                    );
+                    // Attempt to reconnect the heartbeat client
                     match CoordinatorServiceClient::connect(heartbeat_coordinator_addr.clone()).await {
                         Ok(new_client) => {
                             heartbeat_client = new_client;
-                            eprintln!("Reconnected heartbeat client for worker {}", worker_id_for_heartbeat);
+                            eprintln!(
+                                "Reconnected heartbeat client for worker {}. Attempting to send heartbeat immediately.",
+                                worker_id_for_heartbeat
+                            );
+                            // Try sending heartbeat immediately after reconnect
+                            // Use a fresh HeartbeatInfo as time has passed
+                            let immediate_heartbeat_info = HeartbeatInfo {
+                                worker_id: worker_id_for_heartbeat.clone(),
+                                timestamp: chrono::Utc::now().timestamp(),
+                            };
+                            if let Err(immediate_send_err) = heartbeat_client.send_heartbeat(Request::new(immediate_heartbeat_info)).await {
+                                eprintln!(
+                                    "Failed to send immediate heartbeat for worker {} after reconnect: {}",
+                                    worker_id_for_heartbeat, immediate_send_err
+                                );
+                            } else {
+                                println!("Successfully sent immediate heartbeat for worker {} after reconnect.", worker_id_for_heartbeat);
+                            }
                         }
-                        Err(reconnect_err) => { // reconnect_err is tonic::transport::Error
-                            eprintln!("Failed to reconnect heartbeat client for worker {}: {}", worker_id_for_heartbeat, WorkerError::ClientConnection(reconnect_err));
+                        Err(reconnect_err) => {
+                            eprintln!(
+                                "Failed to reconnect heartbeat client for worker {}: {}",
+                                worker_id_for_heartbeat, reconnect_err // reconnect_err is tonic::transport::Error
+                            );
+                            // Client remains the old, likely broken one. Loop will continue, and retry on next cycle.
                         }
                     }
                 }

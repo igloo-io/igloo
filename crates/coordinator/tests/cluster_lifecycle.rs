@@ -31,10 +31,14 @@ async fn test_worker_registration_heartbeat_and_pruning() {
     let test_cluster_state: ClusterState = Arc::new(Mutex::new(HashMap::new()));
 
     // 1. Find a free port and configure settings
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("Failed to bind to random port");
-    let local_addr = listener.local_addr().expect("Failed to get local address");
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")
+        .expect("Failed to bind to random port for test server");
+    let local_addr = listener
+        .local_addr()
+        .expect("Failed to get local address from test listener");
     let port = local_addr.port();
-    drop(listener); // Drop the listener so the server can bind to it
+    // Ensure the listener is dropped *before* the server is spawned on this port.
+    drop(listener);
 
     let settings = test_settings(port);
     let server_settings = settings.clone(); // Clone for the server task
@@ -96,12 +100,19 @@ async fn test_worker_registration_heartbeat_and_pruning() {
         let state = test_cluster_state.lock().await;
         initial_last_seen = state.get(&worker_id).unwrap().last_seen;
     }
-    sleep(StdDuration::from_secs(1)).await; // Ensure time progresses
-     client.send_heartbeat(Request::new(heartbeat_info.clone())).await.expect("SendHeartbeat RPC failed again");
+    sleep(StdDuration::from_secs(1)).await; // Ensure time progresses for timestamp change
+
+    let hb_response_updated = client
+        .send_heartbeat(Request::new(heartbeat_info.clone()))
+        .await
+        .expect("Second SendHeartbeat RPC failed (for Liveness check)");
+    assert!(hb_response_updated.into_inner().ok); // Also ensure we check the response
+
     {
         let state = test_cluster_state.lock().await;
-        assert!(state.get(&worker_id).unwrap().last_seen > initial_last_seen, "Heartbeat did not update last_seen time");
-         println!("Verified last_seen time updated for worker {}", worker_id);
+        let worker_state = state.get(&worker_id).expect("Worker disappeared prematurely");
+        assert!(worker_state.last_seen > initial_last_seen, "Heartbeat did not update last_seen time");
+        println!("Verified last_seen time updated for worker {}", worker_id);
     }
 
 
