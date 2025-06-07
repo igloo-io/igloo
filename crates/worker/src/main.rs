@@ -1,80 +1,41 @@
-use igloo_api::igloo::{
-    coordinator_service_client::CoordinatorServiceClient,
-    worker_service_server::{WorkerService, WorkerServiceServer},
-    DataForTaskRequest, DataForTaskResponse, HeartbeatInfo, TaskDefinition, TaskResult, WorkerInfo,
-};
+use igloo_worker::run_worker_server; // Use item from own library
 use std::net::SocketAddr;
-use tokio::time::{sleep, Duration};
-use tonic::{transport::Server, Request, Response, Status};
+use tokio::sync::oneshot;
 use uuid::Uuid;
-
-struct MyWorkerService;
-
-#[tonic::async_trait]
-impl WorkerService for MyWorkerService {
-    async fn execute_task(
-        &self,
-        request: Request<TaskDefinition>,
-    ) -> Result<Response<TaskResult>, Status> {
-        println!(
-            "Worker received ExecuteTask: {:?}",
-            request.get_ref().task_id
-        );
-        Ok(Response::new(TaskResult {
-            task_id: request.get_ref().task_id.clone(),
-            result: vec![],
-        }))
-    }
-    async fn get_data_for_task(
-        &self,
-        request: Request<DataForTaskRequest>,
-    ) -> Result<Response<DataForTaskResponse>, Status> {
-        println!(
-            "Worker received GetDataForTask: {:?}",
-            request.get_ref().task_id
-        );
-        Ok(Response::new(DataForTaskResponse { data: vec![] }))
-    }
-}
+use std::error::Error;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let worker_id = Uuid::new_v4().to_string();
-    let worker_addr: SocketAddr = "127.0.0.1:50052".parse()?;
-    let coordinator_addr = std::env::args()
-        .nth(1)
-        .unwrap_or_else(|| "http://127.0.0.1:50051".to_string());
 
-    // Register with coordinator
-    let mut client = CoordinatorServiceClient::connect(coordinator_addr.clone()).await?;
-    let info = WorkerInfo {
-        id: worker_id.clone(),
-        address: format!("{}", worker_addr),
-    };
-    let _ = client.register_worker(info).await?;
-    println!("Worker registered with coordinator at {}", coordinator_addr);
+    // Use environment variables for addresses or fall back to defaults
+    let worker_addr_str = std::env::var("WORKER_ADDR").unwrap_or_else(|_| "127.0.0.1:50052".to_string());
+    let coordinator_addr_str = std::env::var("COORDINATOR_ADDR").unwrap_or_else(|_| "http://127.0.0.1:50051".to_string());
 
-    // Spawn heartbeat task
-    let mut client2 = CoordinatorServiceClient::connect(coordinator_addr).await?;
-    let worker_id2 = worker_id.clone();
+    let worker_addr: SocketAddr = worker_addr_str.parse()?;
+
+    println!(
+        "Starting worker {} on {} connecting to coordinator at {}",
+        worker_id, worker_addr, coordinator_addr_str
+    );
+
+    let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+    let worker_id_for_signal_handler = worker_id.clone(); // Clone for the signal handler
+
+    // Handle Ctrl+C for graceful shutdown
     tokio::spawn(async move {
-        loop {
-            let heartbeat = HeartbeatInfo {
-                worker_id: worker_id2.clone(),
-                timestamp: chrono::Utc::now().timestamp(),
-            };
-            if let Err(e) = client2.send_heartbeat(heartbeat).await {
-                eprintln!("Failed to send heartbeat: {}", e);
-                // Optionally, implement retry/backoff here
+        match tokio::signal::ctrl_c().await {
+            Ok(()) => {
+                println!("Ctrl+C received by worker {}, sending shutdown signal...", worker_id_for_signal_handler);
+                if shutdown_tx.send(()).is_err() {
+                    eprintln!("Failed to send shutdown signal to worker server task.");
+                }
             }
-            sleep(Duration::from_secs(5)).await;
+            Err(err) => {
+                eprintln!("Failed to listen for Ctrl+C in worker: {}", err);
+            }
         }
     });
 
-    // Start gRPC server
-    Server::builder()
-        .add_service(WorkerServiceServer::new(MyWorkerService))
-        .serve(worker_addr)
-        .await?;
-    Ok(())
+    run_worker_server(worker_id.clone(), worker_addr, coordinator_addr_str, shutdown_rx).await
 }
