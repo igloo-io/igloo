@@ -45,7 +45,7 @@ pub enum Operator {
 
 // Imports for PhysicalPlanner and PlanningError
 use crate::physical_plan::PhysicalPlan;
-use arrow_schema::{Schema, Field, DataType}; // DataType already imported below for evaluate_expression, but needed here too. Removed SchemaRef
+use arrow_schema::{DataType, Field, Schema}; // DataType already imported below for evaluate_expression, but needed here too. Removed SchemaRef
 use std::sync::Arc; // Arc already imported below, but good to list if it were new.
 
 #[derive(Debug, thiserror::Error)] // Assuming thiserror is already a dependency from previous steps
@@ -57,6 +57,7 @@ pub enum PlanningError {
     // Add other error variants as they become necessary
 }
 
+#[derive(Default)]
 pub struct PhysicalPlanner {}
 
 impl PhysicalPlanner {
@@ -64,12 +65,14 @@ impl PhysicalPlanner {
         Self {}
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     pub fn create_physical_plan(
         &self,
         logical_plan: &LogicalPlan,
     ) -> Result<PhysicalPlan, PlanningError> {
         match logical_plan {
-            LogicalPlan::TableScan { table_name: _ } => { // table_name not used for dummy schema
+            LogicalPlan::TableScan { table_name: _ } => {
+                // table_name not used for dummy schema
                 // In a real engine, we'd look up the schema for table_name.
                 // For now, create a dummy schema, similar to what ScanExec::execute does.
                 let dummy_schema = Arc::new(Schema::new(vec![
@@ -96,14 +99,11 @@ impl PhysicalPlanner {
 // Imports for evaluate_expression
 use arrow_array::{ArrayRef, BooleanArray, Int32Array, RecordBatch}; // Removed StringArray
 use arrow_schema::ArrowError; // DataType already imported above
-// Arc already imported above
-// Your existing Expression and Operator are already in scope in this file.
+                              // Arc already imported above
+                              // Your existing Expression and Operator are already in scope in this file.
 
 // Basic evaluator - will need significant expansion for real queries
-pub fn evaluate_expression(
-    batch: &RecordBatch,
-    expr: &Expression,
-) -> Result<ArrayRef, ArrowError> {
+pub fn evaluate_expression(batch: &RecordBatch, expr: &Expression) -> Result<ArrayRef, ArrowError> {
     match expr {
         Expression::BinaryExpr { left, op, right } => {
             // Extremely simplified: assumes left is col, right is literal, op is Gt, col is Int32
@@ -112,22 +112,35 @@ pub fn evaluate_expression(
                 Expression::Column(name) => batch.column_by_name(name).ok_or_else(|| {
                     ArrowError::InvalidArgumentError(format!("Column '{}' not found", name))
                 })?,
-                _ => return Err(ArrowError::NotYetImplemented("Only column on left side supported".to_string())),
+                _ => {
+                    return Err(ArrowError::NotYetImplemented(
+                        "Only column on left side supported".to_string(),
+                    ))
+                }
             };
 
             let right_val_str = match &**right {
                 Expression::Literal(val) => val,
-                _ => return Err(ArrowError::NotYetImplemented("Only literal on right side supported".to_string())),
+                _ => {
+                    return Err(ArrowError::NotYetImplemented(
+                        "Only literal on right side supported".to_string(),
+                    ))
+                }
             };
 
             // Assuming Int32 for now for simplicity
             let int_array = left_array
                 .as_any()
                 .downcast_ref::<Int32Array>()
-                .ok_or_else(|| ArrowError::NotYetImplemented("Only Int32 column supported for GT".to_string()))?;
+                .ok_or_else(|| {
+                    ArrowError::NotYetImplemented("Only Int32 column supported for GT".to_string())
+                })?;
 
             let literal_val = right_val_str.parse::<i32>().map_err(|e| {
-                ArrowError::InvalidArgumentError(format!("Could not parse literal '{}' as i32: {}", right_val_str, e))
+                ArrowError::InvalidArgumentError(format!(
+                    "Could not parse literal '{}' as i32: {}",
+                    right_val_str, e
+                ))
             })?;
 
             match op {
@@ -138,9 +151,21 @@ pub fn evaluate_expression(
                         .collect();
                     Ok(Arc::new(bool_array) as ArrayRef)
                 }
-                _ => Err(ArrowError::NotYetImplemented(format!("Operator {:?} not supported", op))),
+                Operator::Eq => {
+                    let bool_array: BooleanArray = int_array
+                        .iter()
+                        .map(|opt_val| opt_val.map(|val| val == literal_val))
+                        .collect();
+                    Ok(Arc::new(bool_array) as ArrayRef)
+                }
+                _ => Err(ArrowError::NotYetImplemented(format!(
+                    "Operator {:?} not supported",
+                    op
+                ))),
             }
         }
-        _ => Err(ArrowError::NotYetImplemented("Unsupported expression type".to_string())),
+        _ => Err(ArrowError::NotYetImplemented(
+            "Unsupported expression type".to_string(),
+        )),
     }
 }

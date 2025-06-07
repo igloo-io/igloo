@@ -27,6 +27,9 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
         working-directory: ${{ github.workspace }}
+      - name: Validate schema
+        run: cargo run --bin validate-schema
+        working-directory: ${{ github.workspace }}
       - name: Build
         run: cargo build --workspace --all-targets
         working-directory: ${{ github.workspace }}

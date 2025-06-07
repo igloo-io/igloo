@@ -51,14 +51,14 @@ async fn test_scan_execution() -> Result<(), ExecutionError> {
     let total_rows: usize = results.iter().map(|rb| rb.num_rows()).sum();
     assert_eq!(total_rows, 8);
 
-
     Ok(())
 }
 
 #[tokio::test]
 async fn test_filter_execution() -> Result<(), ExecutionError> {
     let schema = get_dummy_schema();
-        let scan_plan = Arc::new(PhysicalPlan::ScanExec { // Added PhysicalPlan here for clarity
+    let scan_plan = Arc::new(PhysicalPlan::ScanExec {
+        // Added PhysicalPlan here for clarity
         schema: Arc::clone(&schema),
     });
 
@@ -90,12 +90,16 @@ async fn test_filter_execution() -> Result<(), ExecutionError> {
     // For example, collect all 'id' values and check them.
     let mut all_ids: Vec<i32> = Vec::new(); // Changed to Vec<i32>
     for batch in results {
-        let id_col = batch.column_by_name("id").unwrap().as_any().downcast_ref::<Int32Array>().unwrap();
+        let id_col = batch
+            .column_by_name("id")
+            .unwrap()
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
         all_ids.extend(id_col.values().iter().copied()); // Added .copied()
     }
     all_ids.sort(); // Ensure order for comparison
     assert_eq!(all_ids, vec![4, 5, 6, 7, 8]); // Compare with i32 values
-
 
     Ok(())
 }
@@ -103,14 +107,16 @@ async fn test_filter_execution() -> Result<(), ExecutionError> {
 #[tokio::test]
 async fn test_physical_planner_with_execution() -> Result<(), anyhow::Error> {
     // 1. Create Logical Plan (Filter (id > 3) -> Scan)
-        let logical_scan = LogicalPlan::TableScan { table_name: "dummy_table".to_string() }; // Added LogicalPlan for clarity
+    let logical_scan = LogicalPlan::TableScan {
+        table_name: "dummy_table".to_string(),
+    }; // Added LogicalPlan for clarity
     let logical_filter = LogicalPlan::Filter {
         input: Box::new(logical_scan),
         predicate: Expression::BinaryExpr {
             left: Box::new(Expression::Column("id".to_string())),
             op: Operator::Gt,
             right: Box::new(Expression::Literal("3".to_string())),
-        }
+        },
     };
 
     // 2. Create Physical Plan using PhysicalPlanner
@@ -123,11 +129,19 @@ async fn test_physical_planner_with_execution() -> Result<(), anyhow::Error> {
 
     // 4. Assert Results (same assertions as test_filter_execution)
     let total_rows: usize = results.iter().map(|rb| rb.num_rows()).sum();
-    assert_eq!(total_rows, 5, "Planner+Filter should result in 5 rows for id > 3");
+    assert_eq!(
+        total_rows, 5,
+        "Planner+Filter should result in 5 rows for id > 3"
+    );
 
     let mut all_ids: Vec<i32> = Vec::new(); // Changed to Vec<i32>
     for batch in results {
-        let id_col = batch.column_by_name("id").unwrap().as_any().downcast_ref::<Int32Array>().unwrap();
+        let id_col = batch
+            .column_by_name("id")
+            .unwrap()
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
         all_ids.extend(id_col.values().iter().copied()); // Added .copied()
     }
     all_ids.sort();
