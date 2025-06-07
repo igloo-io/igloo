@@ -1,4 +1,8 @@
 use chrono::Utc;
+
+mod planner;
+mod stage;
+
 use igloo_api::igloo::{
     coordinator_service_server::{CoordinatorService, CoordinatorServiceServer},
     HeartbeatInfo, HeartbeatResponse, RegistrationAck, WorkerInfo,
