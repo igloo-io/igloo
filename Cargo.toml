@@ -11,10 +11,14 @@ members = [
     "crates/connectors/postgres",
     "crates/connectors/mysql",
     "crates/connectors/filesystem"
-]
+, "crates/connectors/igloo-connector"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
 tonic = "0.10"
 prost = "0.12"
-prost-types = "0.12" 
+prost-types = "0.12"
+half = "2.4.0" # Re-added: Pinned to be compatible with Rust 1.75.0
+
+# [patch.crates-io] # Section removed
+# half = { version = "2.4.0", git = "https://github.com/rust-lang/half", rev = "42e85580addd695085ac7a389388900719071278" }

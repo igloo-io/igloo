@@ -1,0 +1,12 @@
+[package]
+name = "igloo-connector"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+arrow = "35.0.0"
+async-trait = "0.1"
+futures = "0.3"
+# half = "2.4.0" # Removed from here, rely on workspace pin
