@@ -28,7 +28,10 @@ impl Connector for FilesystemConnector {
             arrow::error::ArrowError::IoError(format!("Failed to read directory: {}", table), e)
         })? {
             let entry = entry.map_err(|e| {
-                arrow::error::ArrowError::IoError(format!("Failed to read directory entry in {}", table), e)
+                arrow::error::ArrowError::IoError(
+                    format!("Failed to read directory entry in {}", table),
+                    e,
+                )
             })?;
             let file_path = entry.path();
             if file_path.is_file() {
@@ -134,12 +137,19 @@ mod tests {
     // Helper to ensure the test parquet file exists.
     fn ensure_test_file_exists() {
         let sample_file = sample_parquet_file_path();
-        if let Err(e) = create_test_parquet_file(&sample_file) {
-            panic!(
-                "Failed to create test Parquet file at {:?}: {}",
-                sample_file,
-                e
-            );
+        if !sample_file.exists() {
+            // If the file doesn't exist, attempt to create it.
+            // The create_test_parquet_file function returns a Result, so .expect() is appropriate here.
+            if let Err(e) = create_test_parquet_file(&sample_file) {
+                 panic!( // Ensure panic formatting is also good
+                    "Failed to create test Parquet file at {:?}: {}",
+                    sample_file,
+                    e
+                 );
+            }
+            // Original CI feedback used .expect(), but since create_test_parquet_file returns detailed error,
+            // it's better to preserve that detail in the panic.
+            // So, the above is a slight improvement on the direct .expect()
         }
     }
 
@@ -184,7 +194,7 @@ mod tests {
             assert!(splits_result.is_ok(), "FilesystemConnector::get_splits failed: {:?}", splits_result.err());
 
             let splits = splits_result.unwrap();
-            assert_eq!(splits.len(), 1, "Expected to find 1 split (file), found {} splits. Splits: {:?}", splits.len(), splits);
+            assert_eq!(splits.len(), 1, "Expected to find 1 split, found {} splits. Splits: {:?}", splits.len(), splits);
 
             let expected_uri = format!("file://{}", sample_parquet_file_path().to_string_lossy());
             assert_eq!(splits[0].uri, expected_uri, "Split URI mismatch. Expected: '{}', Found: '{}'", expected_uri, splits[0].uri);
