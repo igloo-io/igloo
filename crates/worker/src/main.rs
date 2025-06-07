@@ -57,9 +57,10 @@ async fn main() -> Result<(), WorkerError> {
     // Note: worker_id_clone_for_register and worker_addr_str_for_register are effectively replaced by direct use or re-creation.
 
     let connect_backoff_settings = ExponentialBackoff {
-        max_elapsed_time: Some(StdDuration::from_secs(60)),
-        randomization_factor: 0.2,
-        max_interval: StdDuration::from_secs(10), // Added max_interval
+        max_elapsed_time: Some(StdDuration::from_secs(60)), // Existing
+        randomization_factor: 0.5,                         // Updated
+        multiplier: 1.5,                                   // Added/Updated
+        max_interval: StdDuration::from_secs(15),          // Updated
         ..ExponentialBackoff::default()
     };
 
@@ -103,9 +104,10 @@ async fn main() -> Result<(), WorkerError> {
     };
 
     let register_backoff_settings = ExponentialBackoff {
-        max_elapsed_time: Some(StdDuration::from_secs(60)),
-        randomization_factor: 0.2,
-        max_interval: StdDuration::from_secs(10), // Added max_interval
+        max_elapsed_time: Some(StdDuration::from_secs(60)), // Existing
+        randomization_factor: 0.5,                         // Updated
+        multiplier: 1.5,                                   // Added/Updated
+        max_interval: StdDuration::from_secs(15),          // Updated
         ..ExponentialBackoff::default()
     };
 
@@ -166,8 +168,8 @@ async fn main() -> Result<(), WorkerError> {
                 }
                 Err(e) => { // e is tonic::Status
                     let rpc_error = WorkerError::RpcError(e);
-                    eprintln!( // Added timestamp
-                        "[{}] Failed to send heartbeat for worker {}. Error: {}. Attempting to reconnect once...",
+                    eprintln!(
+                        "[{}] Failed to send heartbeat for worker {}. Error: {}. Retrying...", // Ensure it ends with "Retrying..."
                         chrono::Utc::now().to_rfc3339(),
                         worker_id_for_heartbeat,
                         rpc_error
