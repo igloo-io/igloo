@@ -47,11 +47,14 @@ impl Connector for FilesystemConnector {
     async fn read_split(
         &self,
         split: &Split,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<RecordBatch, arrow::error::ArrowError>> + Send>>, arrow::error::ArrowError> {
+    ) -> Result<
+        Pin<Box<dyn Stream<Item = Result<RecordBatch, arrow::error::ArrowError>> + Send>>,
+        arrow::error::ArrowError,
+    > {
         // Ensure URI starts with "file://" and extract file path
         let file_path_str = split.uri.strip_prefix("file://").ok_or_else(|| {
             arrow::error::ArrowError::InvalidArgumentError(format!(
-                "Malformed URI: {}. Expected 'file://'",
+                "Invalid file URI: {}",
                 split.uri
             ))
         })?;
@@ -132,7 +135,11 @@ mod tests {
     fn ensure_test_file_exists() {
         let sample_file = sample_parquet_file_path();
         if let Err(e) = create_test_parquet_file(&sample_file) {
-            panic!("Failed to create test Parquet file at {:?}: {}", sample_file, e);
+            panic!(
+                "Failed to create test Parquet file at {:?}: {}",
+                sample_file,
+                e
+            );
         }
     }
 
