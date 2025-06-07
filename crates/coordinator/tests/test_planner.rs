@@ -53,7 +53,11 @@ mod tests {
         );
 
         let stages_result = planner.plan_stages(plan.clone());
-        assert!(stages_result.is_ok(), "Planning failed: {:?}", stages_result.err());
+        assert!(
+            stages_result.is_ok(),
+            "Planning failed: {:?}",
+            stages_result.err()
+        );
         let stages = stages_result.unwrap();
 
         // Expected: Two stages.
@@ -121,19 +125,19 @@ mod tests {
         let stage2 = &stages[2]; // From RepartitionExec_Top
 
         // Stage 0 (from EmptyExec)
-        assert_eq!(stage0.input_stage_ids.len(), 0, "Stage 0 (EmptyExec) inputs. Stage: {:?}", stage0);
+        assert_eq!(stage0.input_stage_ids.len(), 0, "Stage 0 inputs mismatch. Stage: {:?}", stage0); // Message updated
         assert_eq!(stage0.output_partitions, empty_leaf_plan.output_partitioning().partition_count(), "Stage 0 (EmptyExec) output_partitions. Stage: {:?}", stage0);
         assert!(stage0.stage_id.starts_with("stage_"), "Stage 0 ID format: {}", stage0.stage_id);
 
         // Stage 1 (from RepartitionExec_Bottom)
-        assert_eq!(stage1.input_stage_ids.len(), 1, "Stage 1 (Repartition_Bottom) inputs. Stage: {:?}", stage1);
-        assert_eq!(stage1.input_stage_ids[0], stage0.stage_id, "Stage 1 input should be Stage 0. Stage: {:?}", stage1);
+        assert_eq!(stage1.input_stage_ids.len(), 1, "Stage 1 (Repartition_Bottom) inputs. Stage: {:?}", stage1); // This line is preserved
+        assert_eq!(stage1.input_stage_ids[0], stage0.stage_id, "Stage 1 should depend on Stage 0. Stage: {:?}", stage1); // Message updated
         assert_eq!(stage1.output_partitions, num_partitions_bottom, "Stage 1 (Repartition_Bottom) output_partitions. Stage: {:?}", stage1);
         assert!(stage1.stage_id.starts_with("stage_"), "Stage 1 ID format: {}", stage1.stage_id);
 
         // Stage 2 (from RepartitionExec_Top)
-        assert_eq!(stage2.input_stage_ids.len(), 1, "Stage 2 (Repartition_Top) inputs. Stage: {:?}", stage2);
-        assert_eq!(stage2.input_stage_ids[0], stage1.stage_id, "Stage 2 input should be Stage 1. Stage: {:?}", stage2);
+        assert_eq!(stage2.input_stage_ids.len(), 1, "Stage 2 (Repartition_Top) inputs. Stage: {:?}", stage2); // This line is preserved
+        assert_eq!(stage2.input_stage_ids[0], stage1.stage_id, "Stage 2 should depend on Stage 1. Stage: {:?}", stage2); // Message updated
         assert_eq!(stage2.output_partitions, num_partitions_top, "Stage 2 (Repartition_Top) output_partitions. Stage: {:?}", stage2);
         assert!(stage2.stage_id.starts_with("stage_"), "Stage 2 ID format: {}", stage2.stage_id);
 
