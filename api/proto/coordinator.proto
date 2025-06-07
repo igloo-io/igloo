@@ -3,6 +3,8 @@ syntax = "proto3";
 package igloo;
 
 import "google/protobuf/empty.proto";
+import "arrow/flight/protocol/flight.proto"; // Import Flight protocol
+
 option java_multiple_files = true;
 option go_package = "github.com/igloo/igloo/api/proto;igloo";
 option csharp_namespace = "Igloo.Api.Proto";
@@ -51,6 +53,11 @@ message DataForTaskResponse {
   bytes data = 1;
 }
 
+// Command message for SQL query
+message CommandSql {
+  string query = 1;
+}
+
 service CoordinatorService {
   rpc RegisterWorker(WorkerInfo) returns (RegistrationAck);
   rpc SendHeartbeat(HeartbeatInfo) returns (HeartbeatResponse);
@@ -59,4 +66,15 @@ service CoordinatorService {
 service WorkerService {
   rpc ExecuteTask(TaskDefinition) returns (TaskResult);
   rpc GetDataForTask(DataForTaskRequest) returns (DataForTaskResponse);
+}
+
+// New service for client SQL queries using Arrow Flight
+service IglooClientFlightService {
+  // Get information about the flight (endpoints, ticket) for a given SQL query
+  rpc GetFlightInfoSql(CommandSql) returns (arrow.flight.protocol.FlightInfo);
+
+  // Retrieve a stream of Arrow RecordBatches using a ticket
+  // This reuses the standard Arrow Flight DoGet method.
+  // The ticket would be obtained from one of the FlightEndpoints in FlightInfo.
+  rpc DoGet(arrow.flight.protocol.Ticket) returns (stream arrow.flight.protocol.FlightData);
 }
