@@ -167,56 +167,17 @@ async fn main() -> Result<(), WorkerError> {
                     );
                 }
                 Err(e) => { // e is tonic::Status
-                    let rpc_error = WorkerError::RpcError(e);
+                    let rpc_error = WorkerError::RpcError(e); // Assuming WorkerError::RpcError(#[from] tonic::Status)
                     eprintln!(
-                        "[{}] Failed to send heartbeat for worker {}. Error: {}. Retrying...", // Ensure it ends with "Retrying..."
-                        chrono::Utc::now().to_rfc3339(),
-                        worker_id_for_heartbeat,
+                        "[{}] Failed to send heartbeat for worker {}. Error: {}. Will retry on next cycle.",
+                        chrono::Utc::now().to_rfc3339(), // Using RFC3339 for consistency
+                        worker_id_for_heartbeat,      // Ensure this variable is correctly captured and used
                         rpc_error
                     );
-
-                    match CoordinatorServiceClient::connect(heartbeat_coordinator_addr.clone()).await {
-                        Ok(new_client) => {
-                            heartbeat_client = new_client;
-                            println!( // Added timestamp
-                                "[{}] Successfully reconnected heartbeat client for worker {}.",
-                                chrono::Utc::now().to_rfc3339(),
-                                worker_id_for_heartbeat
-                            );
-
-                            let immediate_heartbeat_info = HeartbeatInfo {
-                                worker_id: worker_id_for_heartbeat.clone(),
-                                timestamp: chrono::Utc::now().timestamp(),
-                            };
-                            if let Err(immediate_send_err_status) =
-                                heartbeat_client.send_heartbeat(Request::new(immediate_heartbeat_info)).await
-                            {
-                                let immediate_send_rpc_err =
-                                    WorkerError::RpcError(immediate_send_err_status);
-                                eprintln!( // Added timestamp
-                                    "[{}] Failed to send immediate heartbeat for worker {} after reconnect: {}",
-                                    chrono::Utc::now().to_rfc3339(),
-                                    worker_id_for_heartbeat,
-                                    immediate_send_rpc_err
-                                );
-                            } else {
-                                println!( // Added timestamp
-                                    "[{}] Successfully sent immediate heartbeat for worker {} after reconnect.",
-                                    chrono::Utc::now().to_rfc3339(),
-                                    worker_id_for_heartbeat
-                                );
-                            }
-                        }
-                        Err(reconnect_err_original) => {
-                            let conn_err = WorkerError::ClientConnection(reconnect_err_original);
-                            eprintln!( // Added timestamp
-                                "[{}] Failed to reconnect heartbeat client for worker {}. Error: {}. Will retry on next cycle.",
-                                chrono::Utc::now().to_rfc3339(),
-                                worker_id_for_heartbeat,
-                                conn_err
-                            );
-                        }
-                    }
+                    // NO RECONNECTION ATTEMPT LOGIC HERE.
+                    // The client (`heartbeat_client`) remains unchanged.
+                    // The loop will sleep and then try `send_heartbeat` again on the next iteration
+                    // using the same (potentially broken) client.
                 }
             }
             sleep(Duration::from_secs(heartbeat_interval)).await;
