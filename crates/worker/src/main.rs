@@ -13,6 +13,7 @@ use std::net::SocketAddr;
 use std::time::Duration as StdDuration; // For ExponentialBackoff config
 use std::error::Error; // For .source()
 use tokio::time::{sleep, Duration}; // Keep tokio's Duration for sleep
+use chrono::Utc; // Added for timestamp logging
 use tonic::{transport::Server, Request, Response, Status};
 use uuid::Uuid;
 
@@ -56,27 +57,40 @@ async fn main() -> Result<(), WorkerError> {
     // Note: worker_id_clone_for_register and worker_addr_str_for_register are effectively replaced by direct use or re-creation.
 
     let connect_backoff_settings = ExponentialBackoff {
-        max_elapsed_time: Some(StdDuration::from_secs(60)), // Max 1 minute for retries
+        max_elapsed_time: Some(StdDuration::from_secs(60)),
         randomization_factor: 0.2,
+        max_interval: StdDuration::from_secs(10), // Added max_interval
         ..ExponentialBackoff::default()
     };
 
     let mut client = retry(connect_backoff_settings.clone(), || {
-        println!("Attempting to connect to coordinator at {}...", settings.coordinator_address);
+        println!(
+            "[{}] Attempting to connect to coordinator at {}...",
+            chrono::Utc::now().to_rfc3339(), // Added timestamp
+            settings.coordinator_address
+        );
         let coordinator_address_clone = settings.coordinator_address.clone();
         async move {
             CoordinatorServiceClient::connect(coordinator_address_clone)
                 .await
                 .map_err(|e_original| {
                     let worker_error = WorkerError::ClientConnection(e_original);
-                    eprintln!("Failed to connect to coordinator: {}. Retrying...", worker_error);
+                    eprintln!(
+                        "[{}] Failed to connect to coordinator: {}. Retrying...",
+                        chrono::Utc::now().to_rfc3339(), // Added timestamp
+                        worker_error
+                    );
                     backoff::Error::transient(worker_error)
                 })
         }
     })
     .await
-    .map_err(|e| {
-        eprintln!("Final connection failure to coordinator after multiple retries: {}", e);
+    .map_err(|e| { // e is WorkerError::ClientConnection
+        eprintln!(
+            "[{}] Final connection failure to coordinator after multiple retries: {}",
+            chrono::Utc::now().to_rfc3339(), // Added timestamp
+            e
+        );
         WorkerError::ConnectionFailed
     })?;
     println!("Successfully connected to coordinator at {}", settings.coordinator_address);
@@ -89,13 +103,18 @@ async fn main() -> Result<(), WorkerError> {
     };
 
     let register_backoff_settings = ExponentialBackoff {
-        max_elapsed_time: Some(StdDuration::from_secs(60)), // Max 1 minute for retries
+        max_elapsed_time: Some(StdDuration::from_secs(60)),
         randomization_factor: 0.2,
+        max_interval: StdDuration::from_secs(10), // Added max_interval
         ..ExponentialBackoff::default()
     };
 
     retry(register_backoff_settings.clone(), || {
-        println!("Attempting to register worker {}...", info_for_retry.id);
+        println!(
+            "[{}] Attempting to register worker {}...",
+            chrono::Utc::now().to_rfc3339(), // Added timestamp
+            info_for_retry.id
+        );
         let mut temp_client = client.clone();
         let current_info = info_for_retry.clone();
         async move {
@@ -103,14 +122,24 @@ async fn main() -> Result<(), WorkerError> {
                 .await
                 .map_err(|e_original| {
                     let worker_error = WorkerError::RpcError(e_original);
-                    eprintln!("Failed to register worker {}: {}. Retrying...", info_for_retry.id, worker_error);
+                    eprintln!(
+                        "[{}] Failed to register worker {}: {}. Retrying...",
+                        chrono::Utc::now().to_rfc3339(), // Added timestamp
+                        info_for_retry.id,
+                        worker_error
+                    );
                     backoff::Error::transient(worker_error)
                 })
         }
     })
     .await
-    .map_err(|e| {
-        eprintln!("Final registration failure for worker {} after multiple retries: {}", info_for_retry.id, e);
+    .map_err(|e| { // e is WorkerError::RpcError
+        eprintln!(
+            "[{}] Final registration failure for worker {} after multiple retries: {}",
+            chrono::Utc::now().to_rfc3339(), // Added timestamp
+            info_for_retry.id,
+            e
+        );
         WorkerError::RegistrationFailed
     })?;
     println!("Worker {} registered successfully with coordinator.", worker_id);
@@ -128,44 +157,62 @@ async fn main() -> Result<(), WorkerError> {
                 timestamp: chrono::Utc::now().timestamp(),
             };
             match heartbeat_client.send_heartbeat(Request::new(heartbeat_info.clone())).await {
-                Ok(_) => println!("Sent heartbeat for worker {}", worker_id_for_heartbeat),
+                Ok(_) => {
+                    println!( // Added timestamp
+                        "[{}] Sent heartbeat for worker {}",
+                        chrono::Utc::now().to_rfc3339(),
+                        worker_id_for_heartbeat
+                    );
+                }
                 Err(e) => { // e is tonic::Status
                     let rpc_error = WorkerError::RpcError(e);
-                    eprintln!(
-                        "Failed to send heartbeat for worker {}. Error: {}. Attempting to reconnect once...",
-                        worker_id_for_heartbeat, rpc_error
+                    eprintln!( // Added timestamp
+                        "[{}] Failed to send heartbeat for worker {}. Error: {}. Attempting to reconnect once...",
+                        chrono::Utc::now().to_rfc3339(),
+                        worker_id_for_heartbeat,
+                        rpc_error
                     );
 
-                    // Attempt to reconnect the heartbeat client *once*.
                     match CoordinatorServiceClient::connect(heartbeat_coordinator_addr.clone()).await {
                         Ok(new_client) => {
                             heartbeat_client = new_client;
-                            println!( // Changed from eprintln to println for successful reconnect
-                                "Successfully reconnected heartbeat client for worker {}.",
+                            println!( // Added timestamp
+                                "[{}] Successfully reconnected heartbeat client for worker {}.",
+                                chrono::Utc::now().to_rfc3339(),
                                 worker_id_for_heartbeat
                             );
-                            // Optional: Attempt to send heartbeat immediately after successful reconnect, ONCE.
+
                             let immediate_heartbeat_info = HeartbeatInfo {
                                 worker_id: worker_id_for_heartbeat.clone(),
                                 timestamp: chrono::Utc::now().timestamp(),
                             };
-                            if let Err(immediate_send_err_status) = heartbeat_client.send_heartbeat(Request::new(immediate_heartbeat_info)).await {
-                                let immediate_send_rpc_err = WorkerError::RpcError(immediate_send_err_status);
-                                eprintln!(
-                                    "Failed to send immediate heartbeat for worker {} after reconnect: {}",
-                                    worker_id_for_heartbeat, immediate_send_rpc_err
+                            if let Err(immediate_send_err_status) =
+                                heartbeat_client.send_heartbeat(Request::new(immediate_heartbeat_info)).await
+                            {
+                                let immediate_send_rpc_err =
+                                    WorkerError::RpcError(immediate_send_err_status);
+                                eprintln!( // Added timestamp
+                                    "[{}] Failed to send immediate heartbeat for worker {} after reconnect: {}",
+                                    chrono::Utc::now().to_rfc3339(),
+                                    worker_id_for_heartbeat,
+                                    immediate_send_rpc_err
                                 );
                             } else {
-                                println!("Successfully sent immediate heartbeat for worker {} after reconnect.", worker_id_for_heartbeat);
+                                println!( // Added timestamp
+                                    "[{}] Successfully sent immediate heartbeat for worker {} after reconnect.",
+                                    chrono::Utc::now().to_rfc3339(),
+                                    worker_id_for_heartbeat
+                                );
                             }
                         }
                         Err(reconnect_err_original) => {
                             let conn_err = WorkerError::ClientConnection(reconnect_err_original);
-                            eprintln!(
-                                "Failed to reconnect heartbeat client for worker {}. Error: {}. Will retry on next cycle.",
-                                worker_id_for_heartbeat, conn_err
+                            eprintln!( // Added timestamp
+                                "[{}] Failed to reconnect heartbeat client for worker {}. Error: {}. Will retry on next cycle.",
+                                chrono::Utc::now().to_rfc3339(),
+                                worker_id_for_heartbeat,
+                                conn_err
                             );
-                            // Client remains the old, likely broken one. Loop will continue, and try full sequence again on next cycle.
                         }
                     }
                 }

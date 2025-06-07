@@ -11,7 +11,7 @@ tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 config = { version = "0.13", features = ["toml"] }
 serde = { version = "1.0", features = ["derive"] }
 backoff = { version = "0.4", features = ["tokio"] }
