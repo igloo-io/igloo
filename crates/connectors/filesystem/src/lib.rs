@@ -48,27 +48,30 @@ impl Connector for FilesystemConnector {
         &self,
         split: &Split,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<RecordBatch, arrow::error::ArrowError>> + Send>>, arrow::error::ArrowError> {
-        // Remove "file://" prefix and handle potential errors if URI is malformed
+        // Ensure URI starts with "file://" and extract file path
         let file_path_str = split.uri.strip_prefix("file://").ok_or_else(|| {
             arrow::error::ArrowError::InvalidArgumentError(format!(
-                "Invalid URI format for split: {}. Expected 'file:///path/to/file'",
+                "Malformed URI: {}. Expected 'file://'",
                 split.uri
             ))
         })?;
 
         let path = Path::new(file_path_str);
+
+        // Check if path exists before trying to open
         if !path.exists() {
-             return Err(arrow::error::ArrowError::IoError(
+            return Err(arrow::error::ArrowError::IoError(
                 format!("File does not exist at path: {}", file_path_str),
                 std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"),
             ));
         }
 
-
+        // Open the file
         let file = std::fs::File::open(path).map_err(|e| {
             arrow::error::ArrowError::IoError(format!("Failed to open file: {}", path.display()), e)
         })?;
 
+        // Build the Parquet reader
         let builder = ParquetRecordBatchReaderBuilder::try_new(file).map_err(|e| {
             arrow::error::ArrowError::ParquetError(format!(
                 "Failed to create ParquetRecordBatchReaderBuilder for {}: {}",
@@ -77,7 +80,6 @@ impl Connector for FilesystemConnector {
             ))
         })?;
 
-        // Assuming all columns are read. Select/project pushdown would happen here.
         let reader = builder.build().map_err(|e| {
             arrow::error::ArrowError::ParquetError(format!(
                 "Failed to build ParquetRecordBatchReader for {}: {}",
@@ -86,8 +88,7 @@ impl Connector for FilesystemConnector {
             ))
         })?;
 
-        // The reader itself is an iterator of Result<RecordBatch, _>.
-        // We need to convert this into a Stream.
+        // Create a stream from the reader
         let stream = stream::iter(reader).map(|result| {
             result.map_err(|parquet_err| {
                 arrow::error::ArrowError::ParquetError(format!(
@@ -106,6 +107,11 @@ impl Connector for FilesystemConnector {
 mod tests {
     use super::*;
     use arrow::array::{Int64Array, StringArray};
+    use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+    use arrow::record_batch::RecordBatch;
+    use parquet::arrow::arrow_writer::ArrowWriter;
+    use std::fs::File;
+    use std::sync::Arc; // For Arc<Schema>
     use std::fs;
     use std::path::PathBuf;
     use tokio::runtime::Runtime; // For running async tests
@@ -125,12 +131,37 @@ mod tests {
     // Helper to ensure the test parquet file exists.
     fn ensure_test_file_exists() {
         let sample_file = sample_parquet_file_path();
-        if !sample_file.exists() {
-            // This is a fallback if the Python script didn't run or was not part of the subtask.
-            // Ideally, the file creation should be guaranteed before tests run.
-            // For this example, we'll panic if it's not there, assuming prior step created it.
-            panic!("Test Parquet file not found at {:?}. Make sure it's created.", sample_file);
+        if let Err(e) = create_test_parquet_file(&sample_file) {
+            panic!("Failed to create test Parquet file at {:?}: {}", sample_file, e);
         }
+    }
+
+    fn create_test_parquet_file(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+        if path.exists() {
+            fs::remove_file(path)?; // Remove if it already exists to ensure fresh state
+        }
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?; // Ensure test_data directory exists
+        }
+
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("col1", DataType::Int64, false),
+            Field::new("col2", DataType::Utf8, false),
+        ]));
+
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(Int64Array::from(vec![1, 2, 3])),
+                Arc::new(StringArray::from(vec!["A", "B", "C"])),
+            ],
+        )?;
+
+        let file = File::create(path)?;
+        let mut writer = ArrowWriter::try_new(file, schema, None)?;
+        writer.write(&batch)?;
+        writer.close()?;
+        Ok(())
     }
 
     #[test]
@@ -143,13 +174,13 @@ mod tests {
             let test_dir_str = test_dir.to_str().unwrap();
 
             let splits_result = connector.get_splits(test_dir_str).await;
-            assert!(splits_result.is_ok(), "get_splits failed: {:?}", splits_result.err());
+            assert!(splits_result.is_ok(), "FilesystemConnector::get_splits failed: {:?}", splits_result.err());
 
             let splits = splits_result.unwrap();
-            assert_eq!(splits.len(), 1, "Expected to find 1 split (file)");
+            assert_eq!(splits.len(), 1, "Expected to find 1 split (file), found {} splits. Splits: {:?}", splits.len(), splits);
 
             let expected_uri = format!("file://{}", sample_parquet_file_path().to_string_lossy());
-            assert_eq!(splits[0].uri, expected_uri, "Split URI does not match expected");
+            assert_eq!(splits[0].uri, expected_uri, "Split URI mismatch. Expected: '{}', Found: '{}'", expected_uri, splits[0].uri);
         });
     }
 
@@ -163,18 +194,18 @@ mod tests {
             let split = Split { uri: sample_file_uri };
 
             let stream_result = connector.read_split(&split).await;
-            assert!(stream_result.is_ok(), "read_split failed: {:?}", stream_result.err());
+            assert!(stream_result.is_ok(), "FilesystemConnector::read_split failed for split {:?}: {:?}", split, stream_result.err());
 
             let mut stream = stream_result.unwrap();
             let mut record_batch_count = 0;
 
             while let Some(batch_result) = stream.next().await {
-                assert!(batch_result.is_ok(), "Reading batch failed: {:?}", batch_result.err());
+                assert!(batch_result.is_ok(), "Reading batch from stream for split {:?} failed: {:?}", split, batch_result.err());
                 let batch = batch_result.unwrap();
                 record_batch_count += 1;
 
-                assert_eq!(batch.num_columns(), 2, "Expected 2 columns");
-                assert_eq!(batch.num_rows(), 3, "Expected 3 rows in the batch");
+                assert_eq!(batch.num_columns(), 2, "Expected 2 columns, found {}. Schema: {:?}", batch.num_columns(), batch.schema());
+                assert_eq!(batch.num_rows(), 3, "Expected 3 rows in the batch, found {}.", batch.num_rows());
 
                 // Check column names (optional, but good for verification)
                 // Assuming schema is known: col1 (Int64), col2 (String)
@@ -199,7 +230,7 @@ mod tests {
                 let col2_values: Vec<&str> = col2.iter().map(|opt| opt.unwrap()).collect();
                 assert_eq!(col2_values, &["A", "B", "C"]);
             }
-            assert_eq!(record_batch_count, 1, "Expected one record batch from the sample file");
+            assert_eq!(record_batch_count, 1, "Expected one record batch from file {:?}, but got {} batches.", split.uri, record_batch_count);
         });
     }
 
@@ -212,8 +243,9 @@ mod tests {
             fs::create_dir_all(&empty_dir).unwrap(); // Ensure empty dir exists
 
             let splits_result = connector.get_splits(empty_dir.to_str().unwrap()).await;
-            assert!(splits_result.is_ok());
-            assert!(splits_result.unwrap().is_empty(), "Expected no splits from an empty directory");
+            assert!(splits_result.is_ok(), "get_splits on empty dir failed: {:?}", splits_result.err());
+            let splits = splits_result.unwrap();
+            assert!(splits.is_empty(), "Expected no splits from empty dir, found: {:?}", splits);
 
             fs::remove_dir_all(&empty_dir).unwrap(); // Clean up
         });
@@ -226,7 +258,7 @@ mod tests {
             let connector = FilesystemConnector::default();
             // Try to list splits from a file instead of a directory
             let splits_result = connector.get_splits(sample_parquet_file_path().to_str().unwrap()).await;
-            assert!(splits_result.is_err(), "Expected error when path is not a directory");
+            assert!(splits_result.is_err(), "Expected error when get_splits path is not a directory, but got Ok({:?})", splits_result.ok());
         });
     }
 }

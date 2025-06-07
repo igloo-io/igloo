@@ -174,46 +174,46 @@ mod tests {
 
             // 5. Execute ScanExec
             let mut stream_result = scan_exec.execute().await;
-            assert!(stream_result.is_ok(), "ScanExec execute failed: {:?}", stream_result.err());
+            assert!(stream_result.is_ok(), "ScanExec::execute() failed: {:?}", stream_result.err());
 
             let mut stream = stream_result.unwrap();
             let mut record_batch_count = 0;
 
             if let Some(batch_result) = stream.next().await {
-                assert!(batch_result.is_ok(), "Reading batch failed: {:?}", batch_result.err());
+                assert!(batch_result.is_ok(), "Reading batch from ScanExec stream failed: {:?}", batch_result.err());
                 let batch = batch_result.unwrap();
                 record_batch_count += 1;
 
-                assert_eq!(batch.num_columns(), 2, "Expected 2 columns");
-                assert_eq!(batch.num_rows(), 3, "Expected 3 rows"); // sample.parquet has 3 rows
-
-                // Verify schema of the batch
-                assert_eq!(batch.schema(), expected_schema);
+                assert_eq!(batch.num_columns(), 2, "Expected 2 columns, found {}. Schema: {:?}", batch.num_columns(), batch.schema());
+                assert_eq!(batch.num_rows(), 3, "Expected 3 rows, found {}", batch.num_rows());
+                assert_eq!(batch.schema(), expected_schema, "Schema mismatch. Expected: {:?}, Found: {:?}", expected_schema, batch.schema());
 
                 // Verify data for col1
                 let col1 = batch
                     .column(0)
                     .as_any()
                     .downcast_ref::<Int64Array>()
-                    .expect("Failed to downcast col1");
-                assert_eq!(col1.values(), &[1, 2, 3]);
+                    .expect("Failed to downcast col1 to Int64Array"); // Keep expect for critical test logic
+                assert_eq!(col1.values(), &[1, 2, 3], "Data mismatch for col1. Expected: {:?}, Found: {:?}", &[1,2,3], col1.values());
 
                 // Verify data for col2
                 let col2 = batch
                     .column(1)
                     .as_any()
                     .downcast_ref::<StringArray>()
-                    .expect("Failed to downcast col2");
+                    .expect("Failed to downcast col2 to StringArray");
                 let col2_values: Vec<Option<&str>> = col2.iter().collect();
-                assert_eq!(col2_values, vec![Some("A"), Some("B"), Some("C")]);
+                let expected_col2_values = vec![Some("A"), Some("B"), Some("C")];
+                assert_eq!(col2_values, expected_col2_values, "Data mismatch for col2. Expected: {:?}, Found: {:?}", expected_col2_values, col2_values);
 
             } else {
-                panic!("Stream was empty, expected one RecordBatch.");
+                // Panic if the stream is empty when we expect at least one batch
+                panic!("ScanExec stream was empty for split URI '{}', expected at least one RecordBatch.", split_uri);
             }
 
             // Ensure no more batches
-            assert!(stream.next().await.is_none(), "Expected only one RecordBatch from the stream");
-            assert_eq!(record_batch_count, 1, "Expected one record batch from the sample file");
+            assert!(stream.next().await.is_none(), "Expected only one RecordBatch from the ScanExec stream, but found more.");
+            assert_eq!(record_batch_count, 1, "Expected one record batch from ScanExec, but got {} batches.", record_batch_count);
 
         });
     }
