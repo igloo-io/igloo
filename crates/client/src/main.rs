@@ -220,7 +220,10 @@ async fn main() -> Result<()> {
     let channel = match endpoint.connect().await {
         Ok(ch) => ch,
         Err(e) => {
-            eprintln!("Failed to connect to coordinator at '{}': {}", coordinator_address, e);
+            eprintln!(
+                "Failed to connect to coordinator at '{}': {}",
+                coordinator_address, e
+            );
             eprintln!(
                 "Please ensure the Igloo coordinator is running and accessible at {}.",
                 coordinator_address
