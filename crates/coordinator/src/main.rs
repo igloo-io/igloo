@@ -1,4 +1,8 @@
 use chrono::Utc;
+mod config;
+use config::Settings;
+mod error;
+use error::CoordinatorError;
 use igloo_api::igloo::{
     coordinator_service_server::{CoordinatorService, CoordinatorServiceServer},
     HeartbeatInfo, HeartbeatResponse, RegistrationAck, WorkerInfo,
@@ -10,15 +14,54 @@ use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 use tonic::{transport::Server, Request, Response, Status};
 
+// ClusterState and WorkerState remain the same
+// MyCoordinatorService struct and its impl CoordinatorService remain the same
+
 #[derive(Debug, Clone)]
-struct WorkerState {
-    last_seen: i64,
+pub struct WorkerState { // Made public
+    pub last_seen: i64, // Made public for potential test inspection through ClusterState
 }
 
-type ClusterState = Arc<Mutex<HashMap<String, WorkerState>>>;
+pub type ClusterState = Arc<Mutex<HashMap<String, WorkerState>>>; // Already effectively public
 
-struct MyCoordinatorService {
+pub struct MyCoordinatorService { // Made public
     cluster: ClusterState,
+}
+
+pub async fn run_server(
+    settings: Settings, // Use Settings directly from config module
+    cluster_state: ClusterState,
+) -> Result<(), CoordinatorError> {
+    let addr = settings.server_address()?;
+
+    let cluster_state_for_pruning = cluster_state.clone();
+    let prune_interval_secs = settings.prune_interval_secs;
+    let worker_timeout_secs = settings.worker_timeout_secs;
+
+    tokio::spawn(async move {
+        loop {
+            let mut cluster = cluster_state_for_pruning.lock().await;
+            let now = Utc::now().timestamp();
+            cluster.retain(|worker_id, w| {
+                if now - w.last_seen < worker_timeout_secs {
+                    true
+                } else {
+                    println!("Pruning dead worker: {} due to timeout of {}s", worker_id, worker_timeout_secs);
+                    false
+                }
+            });
+            drop(cluster);
+            sleep(Duration::from_secs(prune_interval_secs)).await;
+        }
+    });
+
+    let svc = MyCoordinatorService { cluster: cluster_state };
+    println!("Coordinator (test mode or actual) listening on {}", addr);
+    Server::builder()
+        .add_service(CoordinatorServiceServer::new(svc))
+        .serve(addr)
+        .await?;
+    Ok(())
 }
 
 #[tonic::async_trait]
@@ -57,24 +100,8 @@ impl CoordinatorService for MyCoordinatorService {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cluster: ClusterState = Arc::new(Mutex::new(HashMap::new()));
-    let cluster2 = cluster.clone();
-    // Prune dead workers every 10 seconds
-    tokio::spawn(async move {
-        loop {
-            let mut cluster = cluster2.lock().await;
-            let now = Utc::now().timestamp();
-            cluster.retain(|_, w| now - w.last_seen < 30);
-            sleep(Duration::from_secs(10)).await;
-        }
-    });
-    let addr: SocketAddr = "127.0.0.1:50051".parse()?;
-    let svc = MyCoordinatorService { cluster };
-    println!("Coordinator listening on {}", addr);
-    Server::builder()
-        .add_service(CoordinatorServiceServer::new(svc))
-        .serve(addr)
-        .await?;
-    Ok(())
+async fn main() -> Result<(), CoordinatorError> {
+    let settings = Settings::new()?;
+    let cluster_state: ClusterState = Arc::new(Mutex::new(HashMap::new()));
+    run_server(settings, cluster_state).await
 }
