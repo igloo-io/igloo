@@ -65,7 +65,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             let mut cluster = cluster2.lock().await;
             let now = Utc::now().timestamp();
-            cluster.retain(|_, w| now - w.last_seen < 30);
+            cluster.retain(|worker_id, w| {
+                if now - w.last_seen < 30 {
+                    true // Keep the worker
+                } else {
+                    println!("Pruning dead worker: {}", worker_id); // Log removal
+                    false // Remove the worker
+                }
+            });
             sleep(Duration::from_secs(10)).await;
         }
     });
