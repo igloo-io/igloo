@@ -213,7 +213,7 @@ async fn main() -> Result<()> {
                 "Invalid coordinator address format '{}': {}",
                 coordinator_address, e
             );
-            return Err(e.into()); // Or a more specific anyhow error
+            return Err(anyhow::anyhow!("Invalid coordinator address format or configuration: {}", e));
         }
     };
 
