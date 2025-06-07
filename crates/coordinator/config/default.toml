@@ -1,0 +1,4 @@
+host = "127.0.0.1"
+port = 50051
+# prune_interval_secs = 10 # Optional: will use default from struct
+# worker_timeout_secs = 30 # Optional: will use default from struct
