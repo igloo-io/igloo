@@ -1,0 +1,4 @@
+Placeholder for manifest_file_1.avro.
+This file would list data files (e.g., sample1.parquet).
+Actual content would be Avro binary.
+Datafile: file_path: file:///tests/test_data/simple_iceberg_table/data/sample1.parquet, file_format: PARQUET, record_count: 3, file_size_in_bytes: <size>, ...
