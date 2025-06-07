@@ -46,7 +46,9 @@ async fn create_parquet_from_csv(
 }
 
 // Helper to set up a temporary Iceberg table structure for testing
-async fn setup_test_iceberg_table(base_dir: &TempDir) -> Result<Arc<Table>, Box<dyn std::error::Error>> {
+async fn setup_test_iceberg_table(
+    base_dir: &TempDir,
+) -> Result<Arc<Table>, Box<dyn std::error::Error>> {
     let table_root_path = base_dir.path().join("test_table");
     fs::create_dir_all(table_root_path.join("data"))?;
     fs::create_dir_all(table_root_path.join("metadata"))?;
