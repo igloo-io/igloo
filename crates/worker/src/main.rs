@@ -167,17 +167,32 @@ async fn main() -> Result<(), WorkerError> {
                     );
                 }
                 Err(e) => { // e is tonic::Status
-                    let rpc_error = WorkerError::RpcError(e); // Assuming WorkerError::RpcError(#[from] tonic::Status)
+                    let rpc_error = WorkerError::RpcError(e);
                     eprintln!(
-                        "[{}] Failed to send heartbeat for worker {}. Error: {}. Will retry on next cycle.",
-                        chrono::Utc::now().to_rfc3339(), // Using RFC3339 for consistency
-                        worker_id_for_heartbeat,      // Ensure this variable is correctly captured and used
+                        "[{}] Failed to send heartbeat for worker {}. Error: {}. Attempting reconnection...",
+                        chrono::Utc::now().to_rfc3339(),
+                        worker_id_for_heartbeat,
                         rpc_error
                     );
-                    // NO RECONNECTION ATTEMPT LOGIC HERE.
-                    // The client (`heartbeat_client`) remains unchanged.
-                    // The loop will sleep and then try `send_heartbeat` again on the next iteration
-                    // using the same (potentially broken) client.
+
+                    // Reconnection logic from user feedback
+                    // Using heartbeat_coordinator_addr which is already captured and is a clone of settings.coordinator_address
+                    match CoordinatorServiceClient::connect(heartbeat_coordinator_addr.clone()).await {
+                        Ok(new_client) => {
+                            heartbeat_client = new_client;
+                            println!(
+                                "[{}] Reconnected to coordinator for heartbeat.",
+                                chrono::Utc::now().to_rfc3339()
+                            );
+                        }
+                        Err(reconnect_error) => { // reconnect_error is tonic::transport::Error
+                            eprintln!(
+                                "[{}] Failed to reconnect to coordinator for heartbeat: {}",
+                                chrono::Utc::now().to_rfc3339(),
+                                reconnect_error
+                            );
+                        }
+                    }
                 }
             }
             sleep(Duration::from_secs(heartbeat_interval)).await;
