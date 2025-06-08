@@ -39,6 +39,7 @@ message TaskDefinition {
 message TaskResult {
   string task_id = 1;
   bytes result = 2;
+  bool success = 3; // Added for explicit success status
 }
 
 // Data fetch request for shuffle
@@ -51,9 +52,43 @@ message DataForTaskResponse {
   bytes data = 1;
 }
 
+// Request message for submitting a query
+message QueryRequest {
+  string query_id = 1;
+  string sql = 2;
+}
+
+// Response message for a submitted query
+message QueryResponse {
+  string query_id = 1;
+  string status = 2;
+}
+
+// Request message for getting query status
+message QueryStatusRequest {
+  string query_id = 1;
+}
+
+// Response message for query status
+message QueryStatusResponse {
+  string query_id = 1;
+  string status = 2;
+  string sql = 3;
+  optional bytes physical_plan_bytes = 4;
+  repeated TaskDefinition tasks = 5;
+  optional int64 submitted_at = 6;
+  optional int64 planned_at = 7;
+  optional int64 distributed_plan_created_at = 8;
+  optional int64 dispatched_at = 9;
+  optional int64 finished_at = 10;
+  map<string, string> task_statuses = 11;
+}
+
 service CoordinatorService {
   rpc RegisterWorker(WorkerInfo) returns (RegistrationAck);
   rpc SendHeartbeat(HeartbeatInfo) returns (HeartbeatResponse);
+  rpc SubmitQuery(QueryRequest) returns (QueryResponse);
+  rpc GetQueryStatus(QueryStatusRequest) returns (QueryStatusResponse);
 }
 
 service WorkerService {
