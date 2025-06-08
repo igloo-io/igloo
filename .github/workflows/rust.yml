@@ -43,13 +43,3 @@ jobs:
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
-      - name: Build Python bindings
-        run: |
-          pip install maturin cffi
-          maturin build --manifest-path pyigloo/Cargo.toml
-        working-directory: ${{ github.workspace }}
-      - name: Test Python bindings
-        run: |
-          pip install pytest
-          pytest pyigloo
-        working-directory: ${{ github.workspace }}

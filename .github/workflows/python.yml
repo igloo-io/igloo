@@ -1,0 +1,25 @@
+name: Python bindings
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install build dependencies
+        run: pip install maturin cffi pytest
+      - name: Build Python bindings
+        run: maturin build --manifest-path pyigloo/Cargo.toml
+        working-directory: ${{ github.workspace }}
+      - name: Test Python bindings
+        run: pytest pyigloo
+        working-directory: ${{ github.workspace }}
