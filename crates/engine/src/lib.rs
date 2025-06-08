@@ -79,7 +79,10 @@ impl PhysicalOperator for ScanExec {
             let stream_for_split = async move {
                 connector_clone.read_split(&split_clone).await.map_err(|e| {
                     // Convert connector's error (ArrowError) to EngineError
-                    EngineError::ConnectorError(format!("Failed to read split {:?}: {}", split_clone.uri, e))
+                    EngineError::ConnectorError(format!(
+                        "Failed to read split {:?}: {}",
+                        split_clone.uri, e
+                    ))
                 })
             };
             streams.push(stream_for_split);
@@ -111,10 +114,9 @@ mod tests {
     // This assumes a known relative path between crates during testing.
     // This is fragile; a better way might be to copy/create a test file within igloo-engine's own test setup.
     fn get_sample_parquet_path_for_engine_test() -> String {
-        // Construct path like: igloo/crates/engine/../../crates/connectors/filesystem/test_data/sample.parquet
-        let mut cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")); // .../igloo/crates/engine
-        cargo_manifest_dir.pop(); // .../igloo/crates
-        cargo_manifest_dir.pop(); // .../igloo
+        let mut cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        cargo_manifest_dir.pop(); // -> crates
+        cargo_manifest_dir.pop(); // -> workspace root
         let path = cargo_manifest_dir
             .join("crates")
             .join("connectors")
@@ -122,20 +124,11 @@ mod tests {
             .join("test_data")
             .join("sample.parquet");
 
-        // Panic if file doesn't exist, as test depends on it.
         if !path.exists() {
-            // This check will only run if tests are executed.
-            // For --no-run, this won't be hit, but the test relies on the file's presence.
-            // The filesystem tests *should* create this. If not, this test is invalid.
-            // We assume the file exists for test compilation for now.
-            // A more robust setup would involve the engine crate creating its own test data
-            // or having a shared test data mechanism.
-            println!("Warning: Test Parquet file not found at {:?}. Test will fail if run.", path);
-            // To prevent panic during --no-run if somehow this code path was evaluated by compiler:
-            // return "".to_string();
-            // However, for actual test execution, we need the path or panic.
-            // For now, we'll proceed assuming it's there for compilation phase.
-            // If the file system test for igloo-connector-filesystem did not run or failed, this will fail.
+            panic!( // This is the target panic to be formatted
+                "Test Parquet file not found at {:?}. Ensure 'igloo-connector-filesystem' tests have created it.",
+                path
+            );
         }
         path.to_string_lossy().into_owned()
     }
@@ -149,7 +142,10 @@ mod tests {
         // This is a runtime check.
         let sample_file_path_str = get_sample_parquet_path_for_engine_test();
         if !PathBuf::from(&sample_file_path_str).exists() {
-            panic!("Test Parquet file not found at {}. Ensure 'igloo-connector-filesystem' tests have created it or run its test data generation script.", sample_file_path_str);
+            panic!(
+                "Test Parquet file not found at {}. Ensure 'igloo-connector-filesystem' tests have created it or run its test data generation script.",
+                sample_file_path_str
+            );
         }
 
 

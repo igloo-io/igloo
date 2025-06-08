@@ -141,11 +141,10 @@ mod tests {
             // If the file doesn't exist, attempt to create it.
             // The create_test_parquet_file function returns a Result, so .expect() is appropriate here.
             if let Err(e) = create_test_parquet_file(&sample_file) {
-                 panic!( // Ensure panic formatting is also good
+                panic!(
                     "Failed to create test Parquet file at {:?}: {}",
-                    sample_file,
-                    e
-                 );
+                    sample_file, e
+                );
             }
             // Original CI feedback used .expect(), but since create_test_parquet_file returns detailed error,
             // it's better to preserve that detail in the panic.
@@ -191,7 +190,11 @@ mod tests {
             let test_dir_str = test_dir.to_str().unwrap();
 
             let splits_result = connector.get_splits(test_dir_str).await;
-            assert!(splits_result.is_ok(), "FilesystemConnector::get_splits failed: {:?}", splits_result.err());
+            assert!(
+                splits_result.is_ok(),
+                "FilesystemConnector::get_splits failed: {:?}",
+                splits_result.err()
+            );
 
             let splits = splits_result.unwrap();
             assert_eq!(splits.len(), 1, "Expected to find 1 split, found {} splits. Splits: {:?}", splits.len(), splits);
@@ -211,13 +214,23 @@ mod tests {
             let split = Split { uri: sample_file_uri };
 
             let stream_result = connector.read_split(&split).await;
-            assert!(stream_result.is_ok(), "FilesystemConnector::read_split failed for split {:?}: {:?}", split, stream_result.err());
+            assert!(
+                stream_result.is_ok(),
+                "FilesystemConnector::read_split failed for split {:?}: {:?}",
+                split,
+                stream_result.err()
+            );
 
             let mut stream = stream_result.unwrap();
             let mut record_batch_count = 0;
 
             while let Some(batch_result) = stream.next().await {
-                assert!(batch_result.is_ok(), "Reading batch from stream for split {:?} failed: {:?}", split, batch_result.err());
+                assert!(
+                    batch_result.is_ok(),
+                    "Reading batch from stream for split {:?} failed: {:?}",
+                    split,
+                    batch_result.err()
+                );
                 let batch = batch_result.unwrap();
                 record_batch_count += 1;
 
