@@ -5,7 +5,17 @@ edition = "2021"
 
 [dependencies]
 igloo-common = { path = "../common" }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] } # Ensure features
 tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
+
+# Added dependencies
+igloo-connector = { path = "../connectors/igloo-connector", version = "0.1.0" }
+arrow = "35.0.0" # To match versions used in connector crates
+futures = "0.3"
+async-trait = "0.1"
+thiserror = "1.0"
+
+[dev-dependencies]
+igloo-connector-filesystem = { path = "../connectors/filesystem", version = "0.1.0" }
