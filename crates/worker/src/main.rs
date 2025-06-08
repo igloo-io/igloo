@@ -171,25 +171,54 @@ async fn main() -> Result<(), WorkerError> {
                     eprintln!(
                         "[{}] Failed to send heartbeat for worker {}. Error: {}. Attempting reconnection...",
                         chrono::Utc::now().to_rfc3339(),
-                        worker_id_for_heartbeat,
+                        worker_id_for_heartbeat, // Make sure this is the correct variable name
                         rpc_error
                     );
 
-                    // Reconnection logic from user feedback
-                    // Using heartbeat_coordinator_addr which is already captured and is a clone of settings.coordinator_address
-                    match CoordinatorServiceClient::connect(heartbeat_coordinator_addr.clone()).await {
+                    // Enhanced reconnection logic from user feedback
+                    let reconnect_backoff = ExponentialBackoff {
+                        max_elapsed_time: Some(StdDuration::from_secs(120)), // Increased time
+                        randomization_factor: 0.5,
+                        multiplier: 1.5,
+                        max_interval: StdDuration::from_secs(30), // Increased interval
+                        ..ExponentialBackoff::default()
+                    };
+
+                    // Ensure 'heartbeat_coordinator_addr' is captured and available
+                    let addr_for_reconnect_retry = heartbeat_coordinator_addr.clone();
+
+                    match retry(reconnect_backoff, || {
+                        // Clone address for the async move block inside the closure
+                        let current_addr_for_attempt = addr_for_reconnect_retry.clone();
+                        async move {
+                            CoordinatorServiceClient::connect(current_addr_for_attempt)
+                                .await
+                                .map_err(|reconnect_error_original| { // reconnect_error_original is tonic::transport::Error
+                                    eprintln!(
+                                        "[{}] Reconnection attempt failed: {}",
+                                        chrono::Utc::now().to_rfc3339(),
+                                        reconnect_error_original // Log raw tonic::transport::Error as per snippet
+                                    );
+                                    // Wrap in WorkerError for backoff::Error::transient type consistency
+                                    backoff::Error::transient(WorkerError::ClientConnection(reconnect_error_original))
+                                })
+                        }
+                    })
+                    .await // This await is for the entire retry block
+                    {
                         Ok(new_client) => {
+                            // Ensure 'heartbeat_client' is mutable and captured
                             heartbeat_client = new_client;
                             println!(
-                                "[{}] Reconnected to coordinator for heartbeat.",
+                                "[{}] Successfully reconnected to coordinator for heartbeat.",
                                 chrono::Utc::now().to_rfc3339()
                             );
                         }
-                        Err(reconnect_error) => { // reconnect_error is tonic::transport::Error
+                        Err(final_reconnect_error) => { // This error is WorkerError::ClientConnection
                             eprintln!(
-                                "[{}] Failed to reconnect to coordinator for heartbeat: {}",
+                                "[{}] Final reconnection failure: {}",
                                 chrono::Utc::now().to_rfc3339(),
-                                reconnect_error
+                                final_reconnect_error // Log the wrapped WorkerError
                             );
                         }
                     }
