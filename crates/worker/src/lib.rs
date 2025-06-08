@@ -8,7 +8,8 @@ use std::error::Error;
 use std::net::SocketAddr;
 use tokio::sync::oneshot;
 use tokio::time::{sleep, Duration};
-use tonic::{transport::Server, Request, Response, Status}; // For Box<dyn Error>
+use tonic::{transport::Server, Request, Response, Status};
+use chrono::Utc; // Added for Utc::now()
 
 // MyWorkerService struct and its implementation
 #[derive(Debug)] // Added Debug for MyWorkerService
@@ -139,40 +140,64 @@ pub async fn run_worker_server(
     }
 
     // Spawn heartbeat task
-            // Clone client for heartbeat task. Consider a more robust client management strategy for long-running apps.
-            let mut heartbeat_client = client; // Use the same client, or .clone() if connect returns a clonable client wrapper
+            let mut hb_client = client; // client is from successful registration
             let hb_worker_id = worker_id.clone();
+            let coordinator_addr_for_hb = coordinator_addr.clone(); // Clone coordinator_addr string for the async block
+            const HEARTBEAT_INTERVAL_SECS: u64 = 5;
+
             let _heartbeat_task = tokio::spawn(async move {
+                let mut consecutive_heartbeat_failures = 0u32;
                 loop {
                     let heartbeat = HeartbeatInfo {
                         worker_id: hb_worker_id.clone(),
-                        timestamp: chrono::Utc::now().timestamp(),
+                        timestamp: Utc::now().timestamp(),
                     };
-                    if let Err(e) = heartbeat_client.send_heartbeat(heartbeat).await {
-                        eprintln!("Worker {}: Failed to send heartbeat: {}", hb_worker_id, e);
-                        // Consider attempting to reconnect or other recovery logic here
-                        // For now, we just print and continue trying.
-                        // If connection is permanently lost, this task might spin without success.
-                        // A robust solution might involve trying to reconnect CoordinatorServiceClient.
-                        // This could happen if the coordinator restarts.
-                        // For simplicity, we assume send_heartbeat handles this by erroring out,
-                        // and we just log. If the client becomes invalid, this loop might need
-                        // to re-establish connection.
-                        // Let's try to reconnect if send_heartbeat fails for a more robust heartbeat
-                        match CoordinatorServiceClient::connect(coordinator_addr.clone()).await {
-                            Ok(new_client) => heartbeat_client = new_client,
-                            Err(reconnect_err) => {
-                                eprintln!(
-                                    "Worker {}: Failed to reconnect coordinator for heartbeat: {}",
-                                    hb_worker_id, reconnect_err
+
+                    match hb_client.send_heartbeat(heartbeat.clone()).await {
+                        Ok(_) => {
+                            if consecutive_heartbeat_failures > 0 {
+                                println!(
+                                    "Worker {}: Heartbeat successful to coordinator after {} failure(s).",
+                                    hb_worker_id, consecutive_heartbeat_failures
                                 );
-                                // Sleep before retrying connection to avoid tight loop on persistent error
-                                sleep(Duration::from_secs(5)).await;
-                                continue; // Skip this heartbeat attempt
+                            }
+                            consecutive_heartbeat_failures = 0; // Reset on success
+                        }
+                        Err(e) => {
+                            consecutive_heartbeat_failures += 1;
+                            eprintln!(
+                                "Worker {}: Heartbeat send attempt {} failed: {}. Attempting to reconnect.",
+                                hb_worker_id, consecutive_heartbeat_failures, e
+                            );
+
+                            let backoff_secs = std::cmp::min(60, 2u64.pow(consecutive_heartbeat_failures));
+                            eprintln!(
+                                "Worker {}: Waiting {}s before attempting to reconnect client for heartbeat.",
+                                hb_worker_id, backoff_secs
+                            );
+                            sleep(Duration::from_secs(backoff_secs)).await;
+
+                            match CoordinatorServiceClient::connect(coordinator_addr_for_hb.clone()).await {
+                                Ok(new_client) => {
+                                    println!(
+                                        "Worker {}: Reconnected to coordinator successfully for heartbeat.",
+                                        hb_worker_id
+                                    );
+                                    hb_client = new_client;
+                                    // Do not reset consecutive_heartbeat_failures here.
+                                    // Let the next successful send_heartbeat do it.
+                                }
+                                Err(reconnect_err) => {
+                                    eprintln!(
+                                        "Worker {}: Failed to reconnect to coordinator during heartbeat sequence: {}. Consecutive failures: {}",
+                                        hb_worker_id, reconnect_err, consecutive_heartbeat_failures
+                                    );
+                                    // Will sleep for HEARTBEAT_INTERVAL_SECS then try again.
+                                }
                             }
                         }
                     }
-                    sleep(Duration::from_secs(5)).await;
+                    sleep(Duration::from_secs(HEARTBEAT_INTERVAL_SECS)).await;
                 }
             });
 

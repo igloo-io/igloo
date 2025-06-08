@@ -173,14 +173,12 @@ async fn test_milestone1_query_submission_and_planning() -> Result<(), anyhow::E
     );
 
     // 3. Teardown
-    println!("Shutting down test server...");
+    println!("Shutting down M1 test server (Coordinator)...");
     let _ = shutdown_tx.send(()); // Send shutdown signal
-    match tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT_SECS), server_handle).await {
-        Ok(Ok(_)) => println!("Server task joined successfully."),
-        Ok(Err(e)) => eprintln!("Server task panicked or returned an error: {:?}", e), // This is if the JoinHandle itself errors
-        Err(_) => eprintln!(
-            "Timeout waiting for server task to join. It might have been aborted or stuck."
-        ),
+    if let Err(e) = tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT_SECS), server_handle).await {
+        eprintln!("M1: Timeout or error joining Coordinator server handle: {:?}", e);
+    } else {
+        println!("M1: Coordinator server task joined or completed.");
     }
 
     Ok(())
@@ -375,9 +373,9 @@ async fn test_milestone3_full_end_to_end_execution() -> Result<(), anyhow::Error
         tx.send(()).ok();
     }
     if let Err(e) = tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT_SECS), worker_handle).await {
-        eprintln!("M3: Timeout or error joining worker handle: {:?}", e);
+        eprintln!("M3: Timeout or error joining worker server handle: {:?}", e);
     } else {
-        println!("M3: Worker server task joined.");
+        println!("M3: Worker server task joined or completed.");
     }
 
     println!("M3: Shutting down coordinator server...");
@@ -385,9 +383,9 @@ async fn test_milestone3_full_end_to_end_execution() -> Result<(), anyhow::Error
         tx.send(()).ok();
     }
     if let Err(e) = tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT_SECS), coordinator_handle).await {
-        eprintln!("M3: Timeout or error joining coordinator handle: {:?}", e);
+        eprintln!("M3: Timeout or error joining coordinator server handle: {:?}", e);
     } else {
-        println!("M3: Coordinator server task joined.");
+        println!("M3: Coordinator server task joined or completed.");
     }
 
     Ok(())
@@ -565,12 +563,12 @@ async fn test_milestone2_task_generation() -> Result<(), anyhow::Error> {
     );
 
     // 3. Teardown
-    println!("M2: Shutting down test server...");
+    println!("M2: Shutting down test server (Coordinator)...");
     let _ = shutdown_tx.send(());
-    match tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT_SECS), server_handle).await {
-        Ok(Ok(_)) => println!("M2: Server task joined successfully."),
-        Ok(Err(e)) => eprintln!("M2: Server task panicked or returned an error: {:?}", e),
-        Err(_) => eprintln!("M2: Timeout waiting for server task to join."),
+    if let Err(e) = tokio::time::timeout(Duration::from_secs(SHUTDOWN_TIMEOUT_SECS), server_handle).await {
+        eprintln!("M2: Timeout or error joining Coordinator server handle: {:?}", e);
+    } else {
+        println!("M2: Coordinator server task joined or completed.");
     }
 
     Ok(())
