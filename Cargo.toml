@@ -10,7 +10,8 @@ members = [
     "crates/common",
     "crates/connectors/postgres",
     "crates/connectors/mysql",
-    "crates/connectors/filesystem"
+    "crates/connectors/filesystem",
+    "pyigloo"
 ]
 
 [workspace.dependencies]

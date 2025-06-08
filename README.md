@@ -2,13 +2,41 @@
 
 ![Igloo Logo Placeholder](https://placehold.co/600x300/172554/ffffff?text=Igloo)
 
+---
+
+## 🚀 Quickstart (For Beginners)
+
+1. **Install Prerequisites:**
+   - [Rust (latest stable)](https://www.rust-lang.org/tools/install)
+   - [Protocol Buffers Compiler (`protoc`)](https://grpc.io/docs/protoc-installation/)
+   - (Optional) [Python 3.x](https://www.python.org/downloads/) if you want to use Python bindings
+2. **Clone the repository:**
+   ```bash
+   git clone <your-fork-or-this-repo-url>
+   cd igloo
+   ```
+3. **Build everything:**
+   ```bash
+   cargo build
+   ```
+4. **Run tests:**
+   ```bash
+   cargo test
+   ```
+5. **Format code:**
+   ```bash
+   cargo fmt
+   ```
+
+---
+
 Igloo is a high-performance, distributed SQL query engine built in Rust. It is designed from the ground up to query data from a multitude of sources, including operational databases, data lakes, and streaming systems. Igloo provides a single, unified SQL interface to your entire data ecosystem.
 
 Our mission is to make data access simple, fast, and intelligent. By leveraging an advanced caching layer and a modern, parallel execution engine, Igloo dramatically accelerates data science and analytics workloads.
 
 # Igloo Project Structure
 
-This repository is a Cargo workspace for the Igloo distributed SQL query engine. All core components are implemented as Rust crates under `/crates` and `/api`. Python bindings are under `/python`.
+This repository is a Cargo workspace for the Igloo distributed SQL query engine. All core components are implemented as Rust crates under `/crates` and `/api`. Python bindings are under `/pyigloo` (Rust crate) and `/python/pyigloo` (Python package).
 
 ## Building the Workspace
 
@@ -101,6 +129,67 @@ cargo build
 # Build all crates in release mode (for performance)
 cargo build --release
 ```
+
+---
+
+### Running Tests
+
+To run all tests for all crates:
+
+```bash
+cargo test
+```
+
+If you want to run tests for a specific crate:
+
+```bash
+cd crates/engine
+cargo test
+```
+
+---
+
+### Code Style & Linting
+
+- Format code using [rustfmt](https://github.com/rust-lang/rustfmt):
+  ```bash
+  cargo fmt
+  ```
+- Lint code using [clippy](https://github.com/rust-lang/rust-clippy):
+  ```bash
+  cargo clippy
+  ```
+- The configuration files `rustfmt.toml` and `clippy.toml` are provided in the root directory.
+
+---
+
+### GitHub Actions (CI)
+
+This repository uses GitHub Actions to automatically build and test all code on every pull request and push. You can view the status of the latest builds in the "Actions" tab on GitHub. If your PR fails CI, click on the red ❌ to see the error log and fix the issues before merging.
+
+---
+
+### Troubleshooting
+
+- **Build fails with missing dependencies:**
+  - Make sure you have installed all prerequisites (see Quickstart).
+  - Run `rustup update` to ensure your Rust toolchain is up to date.
+- **`protoc` not found:**
+  - Install Protocol Buffers Compiler and ensure it is in your PATH.
+- **Tests fail:**
+  - Read the error message carefully. If you are stuck, ask for help (see below).
+
+---
+
+### How to Ask for Help
+
+- If you are stuck, first search the error message online.
+- If you still need help, open an issue or ask in the team chat. Please include:
+  - What you tried
+  - The error message
+  - Your OS and Rust version
+
+---
 
 ## Roadmap
 - [ ] Core engine improvements
