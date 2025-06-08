@@ -42,7 +42,13 @@ pip install pre-commit
 pre-commit install
 ```
 
+## Contributing Ideas
+- See the Roadmap in README.md for high-level goals
+- Open issues for bugs, feature requests, or questions
+- Submit pull requests for code, docs, or tests
+- Review the code of conduct and style guidelines
+
 ## Need Help?
 - Check the [README.md](./README.md) for more details.
 - Ask in the team chat or open an issue if you're stuck!
-- Don't hesitate to ask questions—everyone was new once! 
+- Don't hesitate to ask questions—everyone was new once!

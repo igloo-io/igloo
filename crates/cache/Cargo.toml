@@ -5,7 +5,13 @@ edition = "2021"
 
 [dependencies]
 igloo-common = { path = "../common" }
-tokio = { workspace = true }
-tonic = { workspace = true }
-prost = { workspace = true }
-prost-types = { workspace = true }
+tracing = "0.1"
+tokio = { version = "1", features = ["full"] }
+tonic = "0.10"
+prost = "0.12"
+prost-types = "0.12"
+
+[features]
+default = ["in-memory"]
+# Optional in-memory cache backend
+in-memory = []

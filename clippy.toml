@@ -1,0 +1,9 @@
+# Remove invalid keys and use correct clippy.toml format
+# See: https://rust-lang.github.io/rust-clippy/master/index.html#configuration
+# Example: allow some lints, set msrv, etc.
+msrv = "1.70.0"
+
+# Uncomment and adjust as needed:
+# warn-on-all-wildcard-imports = true
+# allow-unwrap-in-tests = true
+# allow-print-in-tests = true

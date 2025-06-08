@@ -100,3 +100,17 @@ cargo build
 
 # Build all crates in release mode (for performance)
 cargo build --release
+```
+
+## Roadmap
+- [ ] Core engine improvements
+- [ ] Pluggable connectors
+- [ ] Security and authentication
+- [ ] Python bindings
+- [ ] Performance optimizations
+
+## Contributing Ideas
+- Add new connectors (e.g., for more databases)
+- Improve documentation and examples
+- Add more tests and CI jobs
+- Suggest new features via issues or pull requests

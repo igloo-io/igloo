@@ -3,24 +3,28 @@ repos:
     hooks:
       - id: rustfmt
         name: cargo fmt
-        entry: cargo fmt --all
+        entry: bash -c 'cargo fmt --all && git add .'  # auto-stage changes
         language: system
         types: [rust]
+        pass_filenames: false
 
       - id: clippy
         name: cargo clippy
-        entry: cargo clippy --workspace --all-targets -- -D warnings
+        entry: bash -c 'cargo clippy --workspace --all-targets -- -D warnings && git add .'  # auto-stage changes
         language: system
         types: [rust]
+        pass_filenames: false
 
       - id: cargo-build
         name: cargo build
         entry: cargo build --workspace --all-targets
         language: system
         types: [rust]
+        pass_filenames: false
 
       - id: cargo-test
         name: cargo test
         entry: cargo test --workspace --all-targets
         language: system
         types: [rust]
+        pass_filenames: false

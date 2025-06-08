@@ -1,0 +1,8 @@
+// This file was split from flight.proto for maintainability.
+syntax = "proto3";
+package arrow.flight.protocol;
+
+// Example: Authentication service definition stub
+service AuthService {
+  // TODO: Define authentication RPCs
+}

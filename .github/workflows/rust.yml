@@ -32,4 +32,24 @@ jobs:
         working-directory: ${{ github.workspace }}
       - name: Run tests
         run: cargo test --workspace --all-targets
-        working-directory: ${{ github.workspace }} 
+        working-directory: ${{ github.workspace }}
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build Python bindings
+        run: |
+          pip install maturin
+          maturin build --manifest-path python/pyigloo/Cargo.toml
+        working-directory: ${{ github.workspace }}
+      - name: Test Python bindings
+        run: |
+          pip install pytest
+          pytest python/pyigloo
+        working-directory: ${{ github.workspace }}
