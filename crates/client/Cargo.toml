@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+arrow = { version = "50.0.0", features = ["pretty_print_json"] }
+arrow-flight = "0.10"
 igloo-api = { path = "../../api" }
 tokio = { version = "1", features = ["full"] }
 tonic = "0.10"
