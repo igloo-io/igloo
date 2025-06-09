@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 igloo-common = { path = "../common" }
-sqlparser = "0.44.0"
 tokio = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }

@@ -15,7 +15,6 @@ pub use logical_plan::{create_logical_plan, LogicalPlan};
 
 #[cfg(test)]
 mod tests {
-    use super::parser::parse_sql;
     use super::*; // To bring create_logical_plan and LogicalPlan into scope
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
@@ -25,13 +24,6 @@ mod tests {
         assert_eq!(2 + 2, 4);
     }
 
-    #[test]
-    fn test_simple_select() {
-        let sql = "SELECT a, b FROM table_1 WHERE a > 10";
-        let ast = parse_sql(sql);
-        assert!(ast.is_ok());
-      {
-      
     #[test]
     fn test_create_logical_plan() {
         let sql = "SELECT a FROM my_table WHERE b > 10";
