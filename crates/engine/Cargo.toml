@@ -9,3 +9,4 @@ tokio = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
+sqlparser = "0.56.0"

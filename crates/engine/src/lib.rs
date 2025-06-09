@@ -10,44 +10,58 @@
 //! # TODO
 //! Implement query engine logic
 
+pub mod logical_plan;
+pub use logical_plan::{create_logical_plan, LogicalPlan};
+
 #[cfg(test)]
 mod tests {
+    use super::*; // To bring create_logical_plan and LogicalPlan into scope
+    use sqlparser::dialect::GenericDialect;
+    use sqlparser::parser::Parser;
+
     #[test]
     fn sample_test() {
         assert_eq!(2 + 2, 4);
     }
 
     #[test]
-    fn test_create_physical_plan() {
-        // This test is conceptual since create_physical_plan is not actually
-        // part of the public API of lib.rs directly, but rather used by a planner.
-        // For now, we'll simulate a direct call if it were possible,
-        // or verify related public functions if they existed.
+    fn test_create_logical_plan() {
+        let sql = "SELECT a FROM my_table WHERE b > 10";
 
-        // Assuming PhysicalPlan and related enums/structs are made public for testing,
-        // or this test is moved to physical_plan.rs where they are directly accessible.
-        // Since the subtask asks to add it here, we proceed with that assumption.
+        // Parse the SQL string using sqlparser
+        let dialect = GenericDialect {}; // Or any other dialect
+        let ast_statements = Parser::parse_sql(&dialect, sql).unwrap();
 
-        // To make this compile, we'd need:
-        // use crate::physical_plan::{PhysicalPlan, Expression as PhysicalExpression, RecordBatchStream, execute_physical_plan};
-        // use std::sync::Arc;
+        // We expect a single statement for this test SQL
+        assert_eq!(ast_statements.len(), 1, "Expected one SQL statement");
+        let ast = ast_statements.into_iter().next().unwrap();
 
-        // However, create_physical_plan itself isn't a function to be tested from here.
-        // This test seems more suited for testing the *execution* of a plan,
-        // or the *creation* of a logical plan that then gets converted.
+        // This is the function you need to implement (already done)
+        let logical_plan = create_logical_plan(ast).unwrap();
 
-        // Let's assume the intent is to check if we can construct a PhysicalPlan::Dummy
-        // as a basic check that the types are available, though this isn't
-        // "creating a physical plan" via a specific library function from lib.rs.
-        // use crate::physical_plan::PhysicalPlan; // Assuming pub
-        // let dummy_plan = PhysicalPlan::Dummy;
-        // assert_eq!(dummy_plan, PhysicalPlan::Dummy);
-
-        // Given the prompt likely refers to testing functionality related to physical plans
-        // that *would be* exposed or utilized by the engine's library part,
-        // and direct creation isn't a lib.rs function:
-        // This test is more of a placeholder for future integration tests.
-        // For now, let's just make it a minimal, passing test.
-        assert!(true, "Placeholder test for physical plan creation aspects");
+        // Verify the plan has the correct structure
+        // Projection -> Filter -> TableScan
+        match logical_plan {
+            LogicalPlan::Projection { expr, input } => {
+                // Check projection expressions (optional, but good for thoroughness)
+                assert_eq!(expr, vec!["a".to_string()]);
+                match *input {
+                    LogicalPlan::Filter { predicate, input } => {
+                        // Check predicate (optional)
+                        assert_eq!(predicate, "b > 10".to_string()); // Based on current simple string representation
+                        match *input {
+                            LogicalPlan::TableScan { table_name } => {
+                                // Check table name (optional)
+                                assert_eq!(table_name, "my_table".to_string());
+                                // The structure is correct if we reach here
+                            }
+                            _ => panic!("Expected TableScan, got {:?}", *input),
+                        }
+                    }
+                    _ => panic!("Expected Filter, got {:?}", *input),
+                }
+            }
+            _ => panic!("Expected Projection, got {:?}", logical_plan),
+        }
     }
 }
