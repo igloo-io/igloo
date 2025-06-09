@@ -10,3 +10,5 @@ tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 sqlparser = "0.56.0"
+datafusion = "35.0.0"
+datafusion-sql = "35.0.0"
