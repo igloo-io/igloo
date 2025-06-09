@@ -10,12 +10,11 @@
 //! # TODO
 //! Implement query engine logic
 
-use igloo_connector_filesystem::{CsvTable, TableProvider}; // Added TableProvider
+use igloo_connector_filesystem::{CsvTable, TableProvider};
 pub mod logical_plan;
 pub use logical_plan::{create_logical_plan, LogicalPlan};
 
 pub trait ExecutionPlan {
-    // Adjusted return type to include lifetime tied to `self`
     fn execute(&self) -> Result<Box<dyn Iterator<Item = Vec<String>> + '_>, String>;
 }
 
@@ -25,13 +24,7 @@ pub struct ScanExec {
 
 impl ExecutionPlan for ScanExec {
     fn execute(&self) -> Result<Box<dyn Iterator<Item = Vec<String>> + '_>, String> {
-        let table = CsvTable::new(&self.path); // Changed to &self.path
-                                               // table.scan() now correctly calls TableProvider::scan if TableProvider is in scope
-                                               // And CsvTable::scan returns Result<Box<dyn Iterator<Item = Row>>> which is Vec<String>
-                                               // Error type also matches if CsvTable::scan returns our local Result which is igloo_common::error::Error
-                                               // However, ScanExec::execute returns Result<..., String> for error.
-                                               // CsvTable::scan (from origin/main) returns Result<..., igloo_common::error::Error>
-                                               // Need to map the error type.
+        let table = CsvTable::new(&self.path);
         table.scan().map_err(|e| e.to_string())
     }
 }

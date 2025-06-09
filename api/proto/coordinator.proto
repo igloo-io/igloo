@@ -36,9 +36,15 @@ message TaskDefinition {
 }
 
 // Task result (serialized Arrow RecordBatch or similar)
+// This message might become unused or used by a different RPC later
 message TaskResult {
   string task_id = 1;
   bytes result = 2;
+}
+
+// New message for task status
+message TaskStatus {
+  string status = 1; // e.g., "SUBMITTED"
 }
 
 // Data fetch request for shuffle
@@ -57,6 +63,7 @@ service CoordinatorService {
 }
 
 service WorkerService {
-  rpc ExecuteTask(TaskDefinition) returns (TaskResult);
+  // Modified ExecuteTask to return TaskStatus
+  rpc ExecuteTask(TaskDefinition) returns (TaskStatus);
   rpc GetDataForTask(DataForTaskRequest) returns (DataForTaskResponse);
 }
