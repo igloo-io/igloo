@@ -116,11 +116,12 @@ pub async fn dispatch_parallel_task(sql: &str) -> Result<()> {
         && !matches!(partitioned_plans[0], EnginePhysicalPlan::Scan { .. })
     {
         // Non-scan plan, send to first worker
-        for _ in 0..num_workers { // conceptually, only first worker gets it, but let's prepare for N futures
-                                  // to simplify try_join_all, though only one would do real work
-                                  // or, better, just send to one worker.
-                                  // For this implementation, we'll send the single non-scan plan to each worker.
-                                  // A more advanced scheduler might pick one.
+        for _ in 0..num_workers {
+            // conceptually, only first worker gets it, but let's prepare for N futures
+            // to simplify try_join_all, though only one would do real work
+            // or, better, just send to one worker.
+            // For this implementation, we'll send the single non-scan plan to each worker.
+            // A more advanced scheduler might pick one.
             plans_to_dispatch.push(partitioned_plans[0].clone());
         }
     } else if partitioned_plans.len() == num_workers {
@@ -225,7 +226,6 @@ pub async fn dispatch_parallel_task(sql: &str) -> Result<()> {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
