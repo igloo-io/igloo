@@ -1,58 +1,45 @@
 # Igloo: The Distributed SQL Query Engine
 
-![Igloo Logo Placeholder](https://placehold.co/600x300/172554/ffffff?text=Igloo)
+![Igloo Logo Placeholder](https://placehold.co/400x200/172554/ffffff?text=Igloo)
 
 ---
 
-## 🚀 Quickstart (For Beginners)
+## 🚀 Quickstart
 
-1. **Install Prerequisites:**
-   - [Rust (latest stable)](https://www.rust-lang.org/tools/install)
-   - [Protocol Buffers Compiler (`protoc`)](https://grpc.io/docs/protoc-installation/)
-   - (Optional) [Python 3.x](https://www.python.org/downloads/) if you want to use Python bindings
-2. **Clone the repository:**
-   ```bash
-   git clone <your-fork-or-this-repo-url>
-   cd igloo
-   ```
-3. **Build everything:**
-   ```bash
-   cargo build
-   ```
-4. **Run tests:**
-   ```bash
-   cargo test
-   ```
-5. **Format code:**
-   ```bash
-   cargo fmt
-   ```
+1.  **Install Prerequisites:**
+    * [Rust (latest stable)](https://www.rust-lang.org/tools/install)
+    * [Protocol Buffers Compiler (`protoc`)](https://grpc.io/docs/protoc-installation/)
+    * (Optional) [Python 3.x](https://www.python.org/downloads/) if you want to use Python bindings
+2.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/igloo-io/igloo
+    cd igloo
+    ```
+3.  **Build everything:**
+    ```bash
+    cargo build
+    ```
+4.  **Run tests:**
+    ```bash
+    cargo test
+    ```
+5.  **Format code:**
+    ```bash
+    cargo fmt
+    ```
 
 ---
 
 Igloo is a high-performance, distributed SQL query engine built in Rust. It is designed from the ground up to query data from a multitude of sources, including operational databases, data lakes, and streaming systems. Igloo provides a single, unified SQL interface to your entire data ecosystem.
 
-Our mission is to make data access simple, fast, and intelligent. By leveraging an advanced caching layer and a modern, parallel execution engine, Igloo dramatically accelerates data science and analytics workloads.
+Our mission is to make data access simple, fast, and intelligent. By leveraging a state-of-the-art query engine and a modern data transport protocol, Igloo dramatically accelerates data science and analytics workloads.
 
-# Igloo Project Structure
-
-This repository is a Cargo workspace for the Igloo distributed SQL query engine. All core components are implemented as Rust crates under `/crates` and `/api`. Python bindings are under `/pyigloo` (Rust crate) and `/python/pyigloo` (Python package).
-
-## Building the Workspace
-
-To build all components:
-
-```bash
-cargo build
-```
-
----
-
-### Core Features
+## Core Features
 
 * **Federated Queries**: Connect to multiple, disparate data sources (like PostgreSQL, MySQL, and data lake files) and query them together in a single SQL statement.
-* **High-Performance Execution**: Built on Apache Arrow, Igloo utilizes a columnar, in-memory format for all data processing, minimizing serialization overhead and maximizing the benefits of modern CPU architectures.
-* **Intelligent Caching**: Igloo features a transparent caching layer built on Apache Iceberg. Frequently accessed data is automatically cached and kept up-to-date, providing orders-of-magnitude speedups for repeated queries.
+* [cite_start]**Powered by Apache Arrow DataFusion**: Igloo is built on the lightning-fast, extensible, and Rust-native **Apache Arrow DataFusion** query engine.  This provides a rich set of optimizations and a powerful foundation for analytics.
+* **High-Speed Data Transport with Apache Arrow Flight SQL**: Igloo uses **Apache Arrow Flight SQL** for client-server communication, a modern protocol that is significantly faster than traditional methods like ODBC and JDBC.
+* **Intelligent Caching**: Igloo features a transparent caching layer. Frequently accessed data is automatically cached and kept up-to-date, providing orders-of-magnitude speedups for repeated queries.
 * **Elastic & Scalable**: Igloo is designed to run on a cluster of machines, distributing query processing seamlessly across all available resources. It can scale from a single laptop to thousands of nodes.
 * **Modern & Safe**: Written in Rust, Igloo guarantees memory safety and concurrency, eliminating common bugs found in distributed systems and ensuring high reliability.
 * **Extensible by Design**: The "Connector" architecture makes it trivial to add support for new data sources.
@@ -69,8 +56,8 @@ Igloo's architecture is simple and robust, consisting of two primary types of no
 
 The Coordinator is the brain of the Igloo cluster. It is a single process responsible for:
 
-1.  **Accepting Client Connections**: Data scientists and applications connect to the Coordinator to submit SQL queries.
-2.  **Query Planning**: It parses the SQL and creates a an efficient, optimized plan to fetch and process the data. This includes a crucial step where it decides whether to query a live database or use the faster, cached data.
+1.  **Accepting Client Connections**: Data scientists and applications connect to the Coordinator via the Arrow Flight SQL endpoint to submit SQL queries.
+2.  **Query Planning**: It leverages Apache Arrow DataFusion to parse, plan, and optimize the SQL query. This includes a crucial step where it decides whether to query a live database or use the faster, cached data.
 3.  **Cluster Management & Scheduling**: The Coordinator maintains a real-time view of all Worker nodes in the cluster. It knows which workers are available and what resources they have. It breaks the query plan into smaller, parallelizable **execution tasks** and assigns them to the available workers.
 
 #### The Worker Nodes
@@ -86,8 +73,8 @@ The Workers are the hands of the cluster. Each worker node runs a single `igloo-
 #### How a Query is Executed
 
 1.  A user sends a SQL query: `SELECT * FROM postgres_orders WHERE region = 'EMEA';`
-2.  The **Coordinator** receives the query. It checks its catalog and sees that `postgres_orders` is backed by a frequently updated cache.
-3.  The **Planner** inside the Coordinator rewrites the query to use the cache. It creates a physical plan, which is a DAG (Directed Acyclic Graph) of operations.
+2.  The **Coordinator** receives the query via its Arrow Flight SQL endpoint. It checks its catalog and sees that `postgres_orders` is backed by a frequently updated cache.
+3.  The **DataFusion Planner** inside the Coordinator rewrites the query to use the cache. It creates a physical plan, which is a DAG (Directed Acyclic Graph) of operations.
 4.  The **Scheduler** inside the Coordinator breaks the plan into tasks. For example: *Task 1: Scan 10 cache files. Task 2: Scan another 10 cache files.* It sends these tasks to two different idle **Workers**.
 5.  Each **Worker** executes its task. It reads the specified files from the cache, filters for the 'EMEA' region, and produces an Arrow `RecordBatch` in memory.
 6.  The results are streamed back to the Coordinator, which then forwards them to the user.
@@ -102,8 +89,8 @@ This project is a Cargo workspace, making it easy to manage multiple interconnec
 * `/crates`: Contains all the core Rust source code for Igloo.
     * `igloo-coordinator`: Source code for the Coordinator node. The "brain".
     * `igloo-worker`: Source code for the Worker nodes. The "hands".
-    * `igloo-engine`: The core, non-distributed query processing logic. This is where SQL rules and execution operators live.
-    * `igloo-cache`: The library for reading from and writing to our Iceberg cache.
+    * `igloo-engine`: The core, non-distributed query processing logic, now powered by DataFusion. This is where SQL rules and execution operators live.
+    * `igloo-cache`: The library for reading from and writing to our cache.
     * `connectors/`: A home for all data source plugins. Adding a new database connection starts here!
 * `/python`: Python bindings to make it easy to query Igloo from tools like Jupyter, Pandas, and Polars.
 * `/docs`: In-depth documentation and design decision records.
@@ -128,78 +115,3 @@ cargo build
 
 # Build all crates in release mode (for performance)
 cargo build --release
-```
-
----
-
-### Running Tests
-
-To run all tests for all crates:
-
-```bash
-cargo test
-```
-
-If you want to run tests for a specific crate:
-
-```bash
-cd crates/engine
-cargo test
-```
-
----
-
-### Code Style & Linting
-
-- Format code using [rustfmt](https://github.com/rust-lang/rustfmt):
-  ```bash
-  cargo fmt
-  ```
-- Lint code using [clippy](https://github.com/rust-lang/rust-clippy):
-  ```bash
-  cargo clippy
-  ```
-- The configuration files `rustfmt.toml` and `clippy.toml` are provided in the root directory.
-
----
-
-### GitHub Actions (CI)
-
-This repository uses GitHub Actions to automatically build and test all code on every pull request and push. You can view the status of the latest builds in the "Actions" tab on GitHub. If your PR fails CI, click on the red ❌ to see the error log and fix the issues before merging.
-
----
-
-### Troubleshooting
-
-- **Build fails with missing dependencies:**
-  - Make sure you have installed all prerequisites (see Quickstart).
-  - Run `rustup update` to ensure your Rust toolchain is up to date.
-- **`protoc` not found:**
-  - Install Protocol Buffers Compiler and ensure it is in your PATH.
-- **Tests fail:**
-  - Read the error message carefully. If you are stuck, ask for help (see below).
-
----
-
-### How to Ask for Help
-
-- If you are stuck, first search the error message online.
-- If you still need help, open an issue or ask in the team chat. Please include:
-  - What you tried
-  - The error message
-  - Your OS and Rust version
-
----
-
-## Roadmap
-- [ ] Core engine improvements
-- [ ] Pluggable connectors
-- [ ] Security and authentication
-- [ ] Python bindings
-- [ ] Performance optimizations
-
-## Contributing Ideas
-- Add new connectors (e.g., for more databases)
-- Improve documentation and examples
-- Add more tests and CI jobs
-- Suggest new features via issues or pull requests
