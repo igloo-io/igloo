@@ -6,8 +6,8 @@ use tokio::signal;
 use tokio::sync::Mutex;
 use tonic::transport::Server;
 
-mod service;
-mod scheduler; // Added module declaration
+mod scheduler;
+mod service; // Ensure scheduler module is declared
 use service::{ClusterState, MyCoordinatorService};
 
 #[tokio::main]

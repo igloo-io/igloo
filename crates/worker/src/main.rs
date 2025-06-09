@@ -16,14 +16,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let worker_id = Uuid::new_v4().to_string();
 
     // Determine port from environment variable, default to 50051
-    let port = env::var("PORT")
-        .ok()
-        .and_then(|s| s.parse::<u16>().ok())
-        .unwrap_or(50051);
+    let port = env::var("PORT").ok().and_then(|s| s.parse::<u16>().ok()).unwrap_or(50051);
 
     let worker_addr_str = format!("0.0.0.0:{}", port);
-    let worker_addr: SocketAddr = worker_addr_str.parse()
-        .expect("Failed to parse worker address"); // Or handle error more gracefully
+    let worker_addr: SocketAddr = worker_addr_str.parse().expect("Failed to parse worker address"); // Or handle error more gracefully
 
     println!("Worker {} will listen on {}", worker_id, worker_addr); // Updated log message
 
@@ -48,7 +44,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 timestamp: chrono::Utc::now().timestamp(),
             };
             if let Err(e) = client2.send_heartbeat(heartbeat).await {
-                eprintln!("Worker {} failed to send heartbeat: {}", worker_id_hb, e); // Added worker_id to log
+                eprintln!("Worker {} failed to send heartbeat: {}", worker_id_hb, e);
+                // Added worker_id to log
                 // Optionally, implement retry/backoff here
             }
             sleep(Duration::from_secs(5)).await;
@@ -56,8 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     println!("Worker {} starting gRPC server on {}", worker_id, worker_addr); // Added log before server start
-    // Start gRPC server with graceful shutdown
-    Server::builder()
+    Server::builder() // Start gRPC server with graceful shutdown
         .add_service(WorkerServiceServer::new(MyWorkerService))
         .serve_with_shutdown(worker_addr, async {
             tokio::signal::ctrl_c().await.expect("failed to listen for event");
