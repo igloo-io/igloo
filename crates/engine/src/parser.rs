@@ -1,8 +1,8 @@
 // In crates/engine/src/parser.rs
+use igloo_common::error::Result;
 use sqlparser::ast::Statement;
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
-use igloo_common::error::Result;
 
 pub fn parse_sql(sql: &str) -> Result<Statement> {
     let dialect = GenericDialect {};
