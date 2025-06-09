@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+csv = "1.1"
 igloo-common = { path = "../../common" }
 tokio = { version = "1", features = ["full"] }
 tonic = "0.10"
 prost = "0.12"
 prost-types = "0.12"
+parquet = "50.0.0"
