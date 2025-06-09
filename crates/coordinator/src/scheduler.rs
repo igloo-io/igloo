@@ -1,11 +1,11 @@
 use anyhow::{anyhow, Context, Result};
-use bincode;
+// bincode is used via bincode::serialize/deserialize directly
 use futures::future::try_join_all;
 
-use igloo_api::pb::igloo_worker_client::IglooWorkerClient;
-use igloo_api::pb::TaskDefinition;
+use igloo_api::igloo::igloo_worker_client::IglooWorkerClient; // Corrected path
+use igloo_api::igloo::TaskDefinition; // Corrected path
 use igloo_engine::logical_plan::LogicalPlan as EngineLogicalPlan; // Alias to avoid confusion
-use igloo_engine::physical_plan::PhysicalPlan as EnginePhysicalPlan;
+use igloo_engine::PhysicalPlan as EnginePhysicalPlan; // Corrected path
 use sqlparser::ast::Statement;
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
