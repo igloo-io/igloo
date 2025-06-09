@@ -9,3 +9,7 @@ tokio = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
+igloo-connector-filesystem = { path = "../connectors/filesystem" }
+
+[dev-dependencies]
+tempfile = "3.3"
