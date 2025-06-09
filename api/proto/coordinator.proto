@@ -57,9 +57,18 @@ message DataForTaskResponse {
   bytes data = 1;
 }
 
+message ExecuteQueryRequest {
+  string sql = 1;
+}
+
+message ExecuteQueryResponse {
+  string plan = 1; // Will hold the Debug string of the LogicalPlan
+}
+
 service CoordinatorService {
   rpc RegisterWorker(WorkerInfo) returns (RegistrationAck);
   rpc SendHeartbeat(HeartbeatInfo) returns (HeartbeatResponse);
+  rpc ExecuteQuery(ExecuteQueryRequest) returns (ExecuteQueryResponse);
 }
 
 service WorkerService {
