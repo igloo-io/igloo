@@ -15,8 +15,8 @@ pub mod arrow {
 
 use arrow_flight::{
     flight_service_server::FlightService, Action, ActionType, Criteria, Empty, FlightData,
-    FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse, PutResult,
-    SchemaResult, Ticket,
+    FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse, PutResult, SchemaResult,
+    Ticket,
 };
 // use crate::arrow::flight::protocol::PollInfo; // Corrected import for PollInfo - now unused
 use futures::Stream;
@@ -35,7 +35,8 @@ impl FlightService for IglooflightSqlService {
     type DoPutStream = Pin<Box<dyn Stream<Item = Result<PutResult, Status>> + Send + 'static>>;
     type DoExchangeStream =
         Pin<Box<dyn Stream<Item = Result<FlightData, Status>> + Send + 'static>>;
-    type DoActionStream = Pin<Box<dyn Stream<Item = Result<arrow_flight::Result, Status>> + Send + 'static>>;
+    type DoActionStream =
+        Pin<Box<dyn Stream<Item = Result<arrow_flight::Result, Status>> + Send + 'static>>;
     type ListActionsStream =
         Pin<Box<dyn Stream<Item = Result<ActionType, Status>> + Send + 'static>>;
 
@@ -50,18 +51,14 @@ impl FlightService for IglooflightSqlService {
         &self,
         _request: Request<Criteria>,
     ) -> Result<Response<Self::ListFlightsStream>, Status> {
-        Err(Status::unimplemented(
-            "list_flights is not yet implemented",
-        ))
+        Err(Status::unimplemented("list_flights is not yet implemented"))
     }
 
     async fn get_flight_info(
         &self,
         _request: Request<FlightDescriptor>,
     ) -> Result<Response<FlightInfo>, Status> {
-        Err(Status::unimplemented(
-            "get_flight_info is not yet implemented",
-        ))
+        Err(Status::unimplemented("get_flight_info is not yet implemented"))
     }
 
     async fn get_schema(
@@ -89,9 +86,7 @@ impl FlightService for IglooflightSqlService {
         &self,
         _request: Request<Streaming<FlightData>>,
     ) -> Result<Response<Self::DoExchangeStream>, Status> {
-        Err(Status::unimplemented(
-            "do_exchange is not yet implemented",
-        ))
+        Err(Status::unimplemented("do_exchange is not yet implemented"))
     }
 
     async fn do_action(
@@ -105,8 +100,6 @@ impl FlightService for IglooflightSqlService {
         &self,
         _request: Request<Empty>,
     ) -> Result<Response<Self::ListActionsStream>, Status> {
-        Err(Status::unimplemented(
-            "list_actions is not yet implemented",
-        ))
+        Err(Status::unimplemented("list_actions is not yet implemented"))
     }
 }
