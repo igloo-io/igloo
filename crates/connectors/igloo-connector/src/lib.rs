@@ -21,5 +21,8 @@ pub trait Connector: Send + Sync {
     async fn read_split(
         &self,
         split: &Split,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<RecordBatch, arrow::error::ArrowError>> + Send>>, arrow::error::ArrowError>; // Assuming Result uses ArrowError
+    ) -> Result<
+        Pin<Box<dyn Stream<Item = Result<RecordBatch, arrow::error::ArrowError>> + Send>>,
+        arrow::error::ArrowError,
+    >;
 }

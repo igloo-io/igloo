@@ -273,7 +273,11 @@ mod tests {
             fs::create_dir_all(&empty_dir).unwrap(); // Ensure empty dir exists
 
             let splits_result = connector.get_splits(empty_dir.to_str().unwrap()).await;
-            assert!(splits_result.is_ok(), "get_splits on empty dir failed: {:?}", splits_result.err());
+            assert!(
+                splits_result.is_ok(),
+                "get_splits on empty dir failed: {:?}",
+                splits_result.err()
+            );
             let splits = splits_result.unwrap();
             assert!(splits.is_empty(), "Expected no splits from empty dir, found: {:?}", splits);
 
