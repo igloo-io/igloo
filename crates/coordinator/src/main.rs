@@ -14,10 +14,7 @@ use service::{ClusterState, MyCoordinatorService};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Attempt to dispatch a parallel task on startup
     let sample_sql = "SELECT * FROM my_table";
-    println!(
-        "Attempting to dispatch parallel task for SQL: '{}'",
-        sample_sql
-    );
+    println!("Attempting to dispatch parallel task for SQL: '{}'", sample_sql);
     match scheduler::dispatch_parallel_task(sample_sql).await {
         Ok(()) => println!("Parallel task dispatch successful."),
         Err(e) => eprintln!("Failed to dispatch parallel task: {:?}", e),
