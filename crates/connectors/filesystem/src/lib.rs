@@ -2,6 +2,8 @@ use csv::ReaderBuilder;
 use igloo_common::error::Error;
 use std::fs::File; // Import the Error type
 
+pub mod parquet;
+
 // Define a local Result alias
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -14,14 +16,13 @@ pub enum DataType {
     Int64,
     Float64,
     Boolean,
-    // Potentially others like Date, Timestamp, etc. later
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Field {
     pub name: String,
     pub data_type: DataType,
-    pub nullable: bool, // Parquet fields can be nullable
+    pub nullable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,21 +56,19 @@ impl CsvTable {
 impl TableProvider for CsvTable {
     fn schema(&self) -> Result<Schema> {
         if !self.has_header {
-            // If there's no header, we can't infer a schema. Return an empty schema.
             return Ok(Schema { fields: vec![] });
         }
 
-        // Open the file to read only the header.
         let file = File::open(&self.path).map_err(|e| Error::Unknown(format!("Failed to open file {}: {}", self.path, e)))?;
-        let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file); // Ensure has_headers is true for reading headers
+        let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
 
         match rdr.headers() {
             Ok(headers) => {
                 let fields = headers.iter()
                     .map(|header_name| Field {
                         name: header_name.to_string(),
-                        data_type: DataType::String, // Assume String for CSVs for now
-                        nullable: true, // Assume nullable for CSVs for now
+                        data_type: DataType::String,
+                        nullable: true,
                     })
                     .collect();
                 Ok(Schema { fields })
