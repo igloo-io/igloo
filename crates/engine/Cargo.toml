@@ -9,3 +9,8 @@ tokio = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
+sqlparser = "0.44.0" # To match main and support logical_plan.rs
+async-trait = "0.1.77" # For RecordBatchStream in physical_plan.rs
+thiserror = "1.0.58"   # For ExecutionError in physical_plan.rs
+serde = { version = "1.0", features = ["derive", "rc"] } # Added "rc" feature for Arc/Rc support
+serde_json = "1.0" # Useful for testing serialization

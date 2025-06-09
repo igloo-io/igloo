@@ -13,7 +13,14 @@ use service::MyWorkerService;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let worker_id = Uuid::new_v4().to_string();
-    let worker_addr: SocketAddr = "127.0.0.1:50052".parse()?;
+    let default_port = 50052;
+    let port = std::env::var("IGLOO_WORKER_PORT")
+        .ok()
+        .and_then(|p_str| p_str.parse::<u16>().ok())
+        .unwrap_or(default_port);
+    let worker_addr_str = format!("127.0.0.1:{}", port);
+    let worker_addr: SocketAddr = worker_addr_str.parse()?;
+    println!("Worker {} attempting to listen on: {}", worker_id, worker_addr); // Added print
     let coordinator_addr =
         std::env::args().nth(1).unwrap_or_else(|| "http://127.0.0.1:50051".to_string());
 

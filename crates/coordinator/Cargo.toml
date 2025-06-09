@@ -12,3 +12,6 @@ tonic = "0.10"
 prost = "0.12"
 prost-types = "0.12"
 chrono = "0.4"
+bincode = "1.3" # For serializing plans
+futures = "0.3" # For join_all
+uuid = { version = "1.6", features = ["v4"] } # For task IDs
