@@ -18,7 +18,9 @@ pub enum LogicalPlan {
         input: Box<LogicalPlan>,
     },
     // A scan from a table (e.g., FROM table_1)
-    TableScan { table_name: String },
+    TableScan {
+        table_name: String,
+    },
 }
 
 use sqlparser::ast::{SelectItem, SetExpr, Statement, TableFactor};
@@ -87,10 +89,8 @@ pub fn create_logical_plan(statement: Statement) -> Result<LogicalPlan, String> 
                         return Err("Projection list cannot be empty".to_string());
                     }
 
-                    plan = LogicalPlan::Projection {
-                        expr: projection_exprs,
-                        input: Box::new(plan),
-                    };
+                    plan =
+                        LogicalPlan::Projection { expr: projection_exprs, input: Box::new(plan) };
 
                     Ok(plan)
                 }

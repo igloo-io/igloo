@@ -9,10 +9,7 @@ pub enum Error {
     Unknown(String),
     // Add more error variants as needed
     #[error("SQL parsing error: {0}")]
-    SqlParser(
-        #[from]
-        ParserError
-    ),
+    SqlParser(#[from] ParserError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
