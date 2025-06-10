@@ -1,31 +1,39 @@
-use igloo_api::igloo::coordinator_service_server::CoordinatorServiceServer;
-use igloo_api::igloo::flight_service_server::FlightServiceServer;
-use igloo_api::igloo::IglooFlightSqlService; // Assuming this will be provided by Beta
-use std::collections::HashMap;
+// Import the FlightSqlServiceServer
+use arrow_flight::flight_service_server::FlightServiceServer as FlightSqlServiceServer;
+use igloo_engine::QueryEngine;
+use service::CoordinatorService; // Your new service
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tokio::signal;
-use tokio::sync::Mutex;
 use tonic::transport::Server;
 
+// Reference the service module
 mod service;
-use service::{ClusterState, MyCoordinatorService};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr: SocketAddr = "127.0.0.1:50051".parse()?;
-    let cluster: ClusterState = Arc::new(Mutex::new(HashMap::new()));
-    let svc = MyCoordinatorService { cluster };
-    let igloo_flight_sql_service_instance = IglooFlightSqlService {}; // Assuming a simple struct instantiation for now
-                                                                      // Start gRPC server with graceful shutdown
+    // Define the server address
+    let addr: SocketAddr = "[::1]:50051".parse()?;
+
+    // Create an instance of the QueryEngine
+    // This assumes QueryEngine::new() is the correct way to instantiate it.
+    // Adjust if QueryEngine has a different constructor.
+    let engine = QueryEngine::new().await?; // If new() is async and returns a Result
+
+    // Create an instance of CoordinatorService
+    let coordinator_service = CoordinatorService { engine };
+
+    // Print confirmation message
     println!("Coordinator listening on {}", addr);
+
+    // Setup and run the gRPC server
     Server::builder()
-        .add_service(CoordinatorServiceServer::new(svc)) // Existing service
-        .add_service(FlightServiceServer::new(igloo_flight_sql_service_instance)) // New Flight SQL service
+        // Add the FlightSqlService implementation
+        .add_service(FlightSqlServiceServer::new(coordinator_service))
         .serve_with_shutdown(addr, async {
             signal::ctrl_c().await.expect("failed to listen for event");
             println!("Shutting down coordinator gracefully...");
         })
         .await?;
+
     Ok(())
 }
