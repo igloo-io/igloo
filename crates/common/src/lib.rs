@@ -4,7 +4,7 @@
 //!
 //! # Example
 //! ```rust
-//! use common::Error;
+//! use igloo_common::Error;
 //! let err = Error::new("example error");
 //! ```
 // TODO: Shared utilities, types, and error handling
