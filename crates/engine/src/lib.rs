@@ -11,7 +11,10 @@
 //! Implement query engine logic
 
 pub mod logical_plan;
+pub mod physical_plan; // Make the module public
 pub use logical_plan::{create_logical_plan, LogicalPlan};
+// Re-export the necessary types from physical_plan
+pub use physical_plan::{ExecutionError, RecordBatch, RecordBatchStream};
 
 #[cfg(test)]
 mod tests {

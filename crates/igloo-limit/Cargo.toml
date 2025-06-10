@@ -1,0 +1,20 @@
+[package]
+name = "igloo-limit"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+igloo-engine = { path = "../../crates/engine" }
+# apache-arrow removed for now from main dependencies
+futures = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+async-stream = "0.3.5"
+async-trait = "0.1.77" # Moved from dev-dependencies as it's needed for RecordBatchStream impl
+
+[dev-dependencies]
+# arrow = { version = "48.0.0" } # Temporarily removed to avoid chrono conflict during test builds
+# arrow-schema = { version = "48.0.0" }
+# arrow-array = { version = "48.0.0" }
+# async-trait removed from here as it's now a main dependency
