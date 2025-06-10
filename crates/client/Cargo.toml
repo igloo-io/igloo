@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-arrow = { version = "50.0.0", features = ["pretty_print_json"] }
-arrow-flight = "0.10"
+arrow = { version = "55.0.0", features = ["prettyprint"] }
+arrow-flight = { version = "55.0.0", features = ["flight-sql-experimental"] }
 igloo-api = { path = "../../api" }
 tokio = { version = "1", features = ["full"] }
-tonic = "0.10"
-prost = "0.12"
-prost-types = "0.12"
+tokio-stream = { version = "0.1", features = ["sync"] }
+tonic = "0.12"
+prost = "0.13"
+prost-types = "0.13"

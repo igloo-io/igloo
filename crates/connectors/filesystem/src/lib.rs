@@ -22,18 +22,28 @@ pub struct CsvTable {
 
 impl CsvTable {
     pub fn new(path: &str) -> Self {
-        Self { path: path.to_string(), has_header: true }
+        Self {
+            path: path.to_string(),
+            has_header: true,
+        }
     }
 
     pub fn new_with_header(path: &str, has_header: bool) -> Self {
-        Self { path: path.to_string(), has_header }
+        Self {
+            path: path.to_string(),
+            has_header,
+        }
     }
 }
 
 impl TableProvider for CsvTable {
     fn scan(&self) -> Result<Box<dyn Iterator<Item = Row>>> {
-        let file = File::open(&self.path).map_err(|e| Error::Unknown(e.to_string()))?; // Map std::io::Error
-        let mut rdr = ReaderBuilder::new().has_headers(self.has_header).from_reader(file);
+        let file = File::open(&self.path).map_err(
+            |e| Error::Unknown(e.to_string()),
+        )?; // Map std::io::Error
+        let mut rdr = ReaderBuilder::new()
+            .has_headers(self.has_header)
+            .from_reader(file);
 
         let mut rows: Vec<Row> = Vec::new();
         for result in rdr.records() {
@@ -106,8 +116,10 @@ mod tests {
             // Check if the error message contains the relevant part
             // This makes the test less brittle to exact error formatting
             assert!(
-                e.to_string().contains("No such file or directory")
-                    || e.to_string().contains("The system cannot find the file specified")
+                e.to_string().contains("No such file or directory") ||
+                    e.to_string().contains(
+                        "The system cannot find the file specified",
+                    )
             );
         }
     }

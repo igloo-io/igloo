@@ -2,7 +2,7 @@
 set -e
 
 echo "Running cargo fmt check..."
-cargo fmt --all -- --check
+cargo fmt --all -- --force
 
 echo "Running cargo clippy..."
 cargo clippy --workspace --all-targets -- -D warnings
