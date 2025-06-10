@@ -10,3 +10,5 @@ tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 sqlparser = "0.56.0"
+async-trait = "0.1.77"
+thiserror = "1.0"

@@ -1,5 +1,9 @@
 // In crates/engine/src/logical_plan.rs
 
+// Placeholder for expression representation
+// TODO: Define a proper Expression enum/struct
+pub type Expression = String;
+
 // A logical plan represents a query in a tree-like structure.
 #[derive(Debug, PartialEq)] // Added Debug and PartialEq for easier testing
 pub enum LogicalPlan {
