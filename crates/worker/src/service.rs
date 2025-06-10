@@ -1,9 +1,6 @@
 use igloo_api::igloo::{
-    worker_service_server::WorkerService,
-    DataForTaskRequest,
-    DataForTaskResponse,
-    TaskDefinition,
-    TaskStatus, // Changed from TaskResult
+    worker_service_server::WorkerService, DataForTaskRequest, DataForTaskResponse, TaskDefinition,
+    TaskResult,
 };
 use tonic::{Request, Response, Status};
 
@@ -14,14 +11,12 @@ impl WorkerService for MyWorkerService {
     async fn execute_task(
         &self,
         request: Request<TaskDefinition>,
-    ) -> Result<Response<TaskStatus>, Status> {
-        // Changed return type
+    ) -> Result<Response<TaskResult>, Status> {
         // TODO: Authentication/authorization stub
         // e.g., check request.metadata() for auth token
         // TODO: Add TLS support for gRPC in main.rs
         println!("Worker received ExecuteTask: {:?}", request.get_ref().task_id);
-        // Return a TaskStatus instead of TaskResult
-        Ok(Response::new(TaskStatus { status: "SUBMITTED".to_string() }))
+        Ok(Response::new(TaskResult { task_id: request.get_ref().task_id.clone(), result: vec![] }))
     }
     async fn get_data_for_task(
         &self,
