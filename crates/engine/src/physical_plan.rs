@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::logical_plan::Expression;
 
 /// Represents a physical query plan.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum PhysicalPlan {
     /// Scans a table.
     Scan {
@@ -12,15 +12,17 @@ pub enum PhysicalPlan {
         columns: Vec<String>,
         // Predicate pushdown, if any
         predicate: Option<Expression>,
+        partition_id: Option<u32>,
+        total_partitions: Option<u32>,
     },
     /// Filters rows based on a predicate.
     Filter {
-        input: Arc<PhysicalPlan>,
+        input: Box<PhysicalPlan>, // Changed from Arc to Box
         predicate: Expression,
     },
     /// Projects columns.
     Projection {
-        input: Arc<PhysicalPlan>,
+        input: Box<PhysicalPlan>, // Changed from Arc to Box
         expressions: Vec<(Expression, String)>, // (expression, alias)
     },
     /// Placeholder for other operations (e.g., Join, Aggregate, Sort, Limit)
@@ -43,7 +45,7 @@ pub trait RecordBatchStream: Send + Sync {
 }
 
 /// Represents an error during query execution.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, serde::Serialize, serde::Deserialize)]
 pub enum ExecutionError {
     #[error("Generic execution error: {0}")]
     Generic(String),
@@ -102,6 +104,8 @@ mod tests {
             table_name: "test_table".to_string(),
             columns: vec!["col1".to_string(), "col2".to_string()],
             predicate: None,
+            partition_id: None,      // Added
+            total_partitions: None,  // Added
         });
         let result = execute_physical_plan(scan_plan).await;
         assert!(result.is_err());

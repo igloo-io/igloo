@@ -8,11 +8,21 @@ use tokio::signal;
 use tokio::sync::Mutex;
 use tonic::transport::Server;
 
-mod service;
+mod scheduler;
+mod service; // Ensure scheduler module is declared
 use service::{ClusterState, MyCoordinatorService};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Attempt to dispatch a parallel task on startup
+    let sample_sql = "SELECT * FROM my_table";
+    println!("Attempting to dispatch parallel task for SQL: '{}'", sample_sql);
+    match scheduler::dispatch_parallel_task(sample_sql).await {
+        Ok(()) => println!("Parallel task dispatch successful."),
+        Err(e) => eprintln!("Failed to dispatch parallel task: {:?}", e),
+    }
+    println!("--------------------------------------------------");
+
     let addr: SocketAddr = "127.0.0.1:50051".parse()?;
     let cluster: ClusterState = Arc::new(Mutex::new(HashMap::new()));
     let svc = MyCoordinatorService { cluster };

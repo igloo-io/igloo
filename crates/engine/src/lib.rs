@@ -13,6 +13,9 @@
 pub mod logical_plan;
 pub use logical_plan::{create_logical_plan, LogicalPlan};
 
+pub mod physical_plan; // Added
+pub use physical_plan::PhysicalPlan; // Added
+
 #[cfg(test)]
 mod tests {
     use super::*; // To bring create_logical_plan and LogicalPlan into scope

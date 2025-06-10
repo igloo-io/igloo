@@ -1,7 +1,7 @@
 // In crates/engine/src/logical_plan.rs
 
 // A logical plan represents a query in a tree-like structure.
-#[derive(Debug, PartialEq)] // Added Debug and PartialEq for easier testing
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum LogicalPlan {
     // A projection (e.g., SELECT a, b)
     Projection {
@@ -21,7 +21,26 @@ pub enum LogicalPlan {
     TableScan {
         table_name: String,
     },
+    Dummy,
 }
+
+// Placeholder for an expression representation
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum Expression {
+    // Define different types of expressions here
+    // For example:
+    // Column(String),
+    // Literal(String), // Simplified literal representation
+    // BinaryOp { left: Box<Expression>, op: BinaryOperator, right: Box<Expression> },
+    // UnaryOp { op: UnaryOperator, expr: Box<Expression> },
+    // Function { name: String, args: Vec<Expression> },
+    Dummy, // Placeholder variant
+}
+
+// Placeholder for other expression-related enums if needed in future
+// pub enum BinaryOperator { Dummy }
+// pub enum UnaryOperator { Dummy }
+
 
 use sqlparser::ast::{SelectItem, SetExpr, Statement, TableFactor};
 
