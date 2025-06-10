@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-igloo-api = { path = "../../api" }
+igloo-api = { path = "../api" }
 tokio = { version = "1", features = ["full"] }
 tonic = "0.10"
 prost = "0.12"
