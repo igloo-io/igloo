@@ -11,7 +11,8 @@ members = [
     "crates/connectors/postgres",
     "crates/connectors/mysql",
     "crates/connectors/filesystem",
-    "pyigloo"
+    "pyigloo",
+    "crates/igloo-core"
 ]
 resolver = "2"
 
