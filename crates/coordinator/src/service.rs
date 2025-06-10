@@ -1,18 +1,16 @@
 use chrono::Utc;
 use igloo_api::igloo::{
-    coordinator_service_server::CoordinatorService, HeartbeatInfo, HeartbeatResponse,
-    RegistrationAck, WorkerInfo, ExecuteQueryRequest, ExecuteQueryResponse
+    coordinator_service_server::CoordinatorService, ExecuteQueryRequest, ExecuteQueryResponse,
+    HeartbeatInfo, HeartbeatResponse, RegistrationAck, WorkerInfo,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
 
-use datafusion::prelude::*;
-use datafusion_sql::sql_to_rel::SqlToRel;
-use datafusion_common::datafusion_err;
-use datafusion::execution::context::SessionContext;
-
+use datafusion::prelude::SessionContext; // Changed path
+use datafusion_sql::parser::DFParser;
+use datafusion_sql::planner::SqlToRel;
 
 #[derive(Debug, Clone)]
 pub struct WorkerState {
@@ -66,18 +64,34 @@ impl CoordinatorService for MyCoordinatorService {
         let ctx = SessionContext::new();
 
         // Create a SqlToRel planner
-        let planner = SqlToRel::new(&ctx.state()); // SqlToRel requires a SessionState reference
+        let planner = SqlToRel::new(&ctx); // Using &ctx directly
 
-        // Parse the SQL into a LogicalPlan
-        match planner.sql_to_plan(&sql) {
-            Ok(logical_plan) => {
-                let plan_str = format!("{:?}", logical_plan);
-                println!("Generated LogicalPlan: {}", plan_str);
-                // For now, return the Debug string of the plan
-                Ok(Response::new(ExecuteQueryResponse { plan: plan_str }))
+        // Parse the SQL string into AST an Statement
+        match DFParser::parse_sql(&sql) {
+            Ok(mut statements) => {
+                if statements.len() != 1 {
+                    return Err(Status::invalid_argument("Expected exactly one SQL statement"));
+                }
+                // DFParser returns a VecDeque<Statement>, but statement_to_plan expects a single Statement
+                // We've already checked that there's exactly one.
+                let statement = statements.pop_front().unwrap();
+
+                // Convert the Statement to a LogicalPlan
+                match planner.statement_to_plan(statement) {
+                    Ok(logical_plan) => {
+                        let plan_str = format!("{:?}", logical_plan);
+                        println!("Generated LogicalPlan: {}", plan_str);
+                        // For now, return the Debug string of the plan
+                        Ok(Response::new(ExecuteQueryResponse { plan: plan_str }))
+                    }
+                    Err(e) => {
+                        eprintln!("Error planning SQL: {:?}", e);
+                        Err(Status::invalid_argument(format!("Error planning SQL: {}", e)))
+                    }
+                }
             }
             Err(e) => {
-                eprintln!("Error parsing SQL: {:?}", e);
+                eprintln!("Error parsing SQL with DFParser: {:?}", e);
                 Err(Status::invalid_argument(format!("Error parsing SQL: {}", e)))
             }
         }

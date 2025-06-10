@@ -12,3 +12,4 @@ prost-types = { workspace = true }
 sqlparser = "0.56.0"
 datafusion = "35.0.0"
 datafusion-sql = "35.0.0"
+chrono = "=0.4.31"
