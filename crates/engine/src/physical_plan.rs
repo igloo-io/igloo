@@ -17,12 +17,12 @@ pub enum PhysicalPlan {
     },
     /// Filters rows based on a predicate.
     Filter {
-        input: Arc<PhysicalPlan>,
+        input: Box<PhysicalPlan>, // Changed from Arc to Box
         predicate: Expression,
     },
     /// Projects columns.
     Projection {
-        input: Arc<PhysicalPlan>,
+        input: Box<PhysicalPlan>, // Changed from Arc to Box
         expressions: Vec<(Expression, String)>, // (expression, alias)
     },
     /// Placeholder for other operations (e.g., Join, Aggregate, Sort, Limit)
