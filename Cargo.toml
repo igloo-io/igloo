@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "api",
+    "crates/api",
     "crates/client",
     "crates/coordinator",
     "crates/worker",
@@ -11,8 +11,7 @@ members = [
     "crates/connectors/postgres",
     "crates/connectors/mysql",
     "crates/connectors/filesystem",
-    "pyigloo",
-    "crates/igloo-core"
+    "pyigloo"
 ]
 resolver = "2"
 
