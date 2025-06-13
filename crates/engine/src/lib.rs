@@ -20,7 +20,7 @@ impl QueryEngine {
     // Placeholder new function
     // Made it async to match the call `QueryEngine::new().await?` in main.rs
     // Returns a Result to match the `?` used in main.rs
-    pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn new() -> Result<Self, anyhow::Error> {
         // Placeholder: In a real scenario, this would initialize connections,
         // thread pools, configurations, etc.
         Ok(QueryEngine {})

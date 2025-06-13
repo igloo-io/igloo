@@ -1,4 +1,5 @@
 // Import the FlightSqlServiceServer
+use anyhow::Error;
 use arrow_flight::flight_service_server::FlightServiceServer as FlightSqlServiceServer;
 use igloo_engine::QueryEngine;
 use service::CoordinatorService; // Your new service
@@ -10,14 +11,14 @@ use tonic::transport::Server;
 mod service;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Error> {
     // Define the server address
     let addr: SocketAddr = "[::1]:50051".parse()?;
 
     // Create an instance of the QueryEngine
     // This assumes QueryEngine::new() is the correct way to instantiate it.
     // Adjust if QueryEngine has a different constructor.
-    let engine = QueryEngine::new().await?; // If new() is async and returns a Result
+    let engine = QueryEngine::new().await?;
 
     // Create an instance of CoordinatorService
     let coordinator_service = CoordinatorService { engine };

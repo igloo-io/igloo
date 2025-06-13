@@ -130,4 +130,11 @@ impl FlightService for IglooflightSqlService {
     ) -> Result<Response<Self::ListActionsStream>, Status> {
         Err(Status::unimplemented("list_actions is not yet implemented"))
     }
+
+    async fn poll_flight_info(
+        &self,
+        _request: tonic::Request<arrow_flight::FlightDescriptor>,
+    ) -> Result<tonic::Response<arrow_flight::PollInfo>, tonic::Status> {
+        Err(tonic::Status::unimplemented("poll_flight_info not implemented"))
+    }
 }

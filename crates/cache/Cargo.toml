@@ -7,9 +7,9 @@ edition = "2021"
 igloo-common = { path = "../common" }
 tracing = "0.1"
 tokio = { version = "1", features = ["full"] }
-tonic = "0.10"
-prost = "0.12"
-prost-types = "0.12"
+tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
 
 [features]
 default = ["in-memory"]

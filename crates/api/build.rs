@@ -4,7 +4,7 @@ fn main() {
     tonic_build::configure()
         .build_server(true)
         .protoc_arg("--experimental_allow_proto3_optional")
-        .compile(
+        .compile_protos(
             &[
                 "proto/coordinator.proto",
                 "proto/client_flight.proto",
