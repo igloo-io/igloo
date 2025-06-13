@@ -6,6 +6,6 @@ edition = "2021"
 [dependencies]
 igloo-common = { path = "../../common" }
 tokio = { version = "1", features = ["full"] }
-tonic = "0.10"
-prost = "0.12"
-prost-types = "0.12"
+tonic = "0.12"
+prost = "0.13"
+prost-types = "0.13"
