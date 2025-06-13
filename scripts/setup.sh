@@ -27,6 +27,9 @@ fi
 
 # 1b. Ensure clippy and rustfmt are installed
 rustup component add clippy rustfmt
+echo "Verifying component installation..."
+cargo fmt --version || echo "cargo fmt --version failed after rustup component add"
+cargo clippy --version || echo "cargo clippy --version failed after rustup component add"
 
 # 2. Install Protocol Buffers compiler (protoc)
 if ! command -v protoc &> /dev/null; then
