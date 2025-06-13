@@ -220,9 +220,9 @@ dependencies = [
  "base64",
  "bytes",
  "futures",
- "prost 0.13.5",
- "prost-types 0.13.5",
- "tonic 0.12.3",
+ "prost",
+ "prost-types",
+ "tonic",
 ]
 
 [[package]]
@@ -406,40 +406,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edca88bc138befd0323b20752846e6587272d3b03b0343c8ea28a6f819e6e71f"
 dependencies = [
  "async-trait",
- "axum-core 0.4.5",
+ "axum-core",
  "bytes",
  "futures-util",
  "http",
  "http-body",
  "http-body-util",
  "itoa",
- "matchit 0.7.3",
- "memchr",
- "mime",
- "percent-encoding",
- "pin-project-lite",
- "rustversion",
- "serde",
- "sync_wrapper",
- "tower 0.5.2",
- "tower-layer",
- "tower-service",
-]
-
-[[package]]
-name = "axum"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "021e862c184ae977658b36c4500f7feac3221ca5da43e3f25bd04ab6c79a29b5"
-dependencies = [
- "axum-core 0.5.2",
- "bytes",
- "futures-util",
- "http",
- "http-body",
- "http-body-util",
- "itoa",
- "matchit 0.8.4",
+ "matchit",
  "memchr",
  "mime",
  "percent-encoding",
@@ -461,25 +435,6 @@ dependencies = [
  "async-trait",
  "bytes",
  "futures-util",
- "http",
- "http-body",
- "http-body-util",
- "mime",
- "pin-project-lite",
- "rustversion",
- "sync_wrapper",
- "tower-layer",
- "tower-service",
-]
-
-[[package]]
-name = "axum-core"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68464cd0412f486726fb3373129ef5d2993f90c34bc2bc1c1e9943b2f4fc7ca6"
-dependencies = [
- "bytes",
- "futures-core",
  "http",
  "http-body",
  "http-body-util",
@@ -1932,11 +1887,11 @@ version = "0.1.0"
 dependencies = [
  "arrow-flight",
  "futures",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
  "tokio-stream",
- "tonic 0.13.1",
+ "tonic",
  "tonic-build",
 ]
 
@@ -1945,10 +1900,10 @@ name = "igloo-cache"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
  "tracing",
 ]
 
@@ -1957,10 +1912,10 @@ name = "igloo-cdc"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
 ]
 
 [[package]]
@@ -1968,22 +1923,22 @@ name = "igloo-client"
 version = "0.1.0"
 dependencies = [
  "igloo-api",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
 ]
 
 [[package]]
 name = "igloo-common"
 version = "0.1.0"
 dependencies = [
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "sqlparser 0.56.0",
  "thiserror",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
 ]
 
 [[package]]
@@ -1992,10 +1947,10 @@ version = "0.1.0"
 dependencies = [
  "csv",
  "igloo-common",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
 ]
 
 [[package]]
@@ -2003,10 +1958,10 @@ name = "igloo-connector-mysql"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
 ]
 
 [[package]]
@@ -2014,10 +1969,10 @@ name = "igloo-connector-postgres"
 version = "0.1.0"
 dependencies = [
  "igloo-common",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
 ]
 
 [[package]]
@@ -2028,10 +1983,10 @@ dependencies = [
  "igloo-api",
  "igloo-common",
  "igloo-engine",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
 ]
 
 [[package]]
@@ -2040,11 +1995,11 @@ version = "0.1.0"
 dependencies = [
  "datafusion",
  "igloo-common",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "sqlparser 0.56.0",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
 ]
 
 [[package]]
@@ -2054,10 +2009,10 @@ dependencies = [
  "chrono",
  "igloo-api",
  "igloo-common",
- "prost 0.14.0",
- "prost-types 0.14.0",
+ "prost",
+ "prost-types",
  "tokio",
- "tonic 0.13.1",
+ "tonic",
  "uuid",
 ]
 
@@ -2266,12 +2221,6 @@ name = "matchit"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
-
-[[package]]
-name = "matchit"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "md-5"
@@ -2665,17 +2614,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2796faa41db3ec313a31f7624d9286acf277b52de526150b7e69f3debf891ee5"
 dependencies = [
  "bytes",
- "prost-derive 0.13.5",
-]
-
-[[package]]
-name = "prost"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbe28332295ca4451b7d779aff2749b144cabe5e6e05fe86f31337831d7df232"
-dependencies = [
- "bytes",
- "prost-derive 0.14.0",
+ "prost-derive",
 ]
 
 [[package]]
@@ -2691,8 +2630,8 @@ dependencies = [
  "once_cell",
  "petgraph 0.7.1",
  "prettyplease",
- "prost 0.13.5",
- "prost-types 0.13.5",
+ "prost",
+ "prost-types",
  "regex",
  "syn",
  "tempfile",
@@ -2712,34 +2651,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "prost-derive"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26ac3e3c6b0e1c219e61ceda600eaad26d7195ecc9b5c027925c904091374ab5"
-dependencies = [
- "anyhow",
- "itertools",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "prost-types"
 version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52c2c1bf36ddb1a1c396b3601a3cec27c2462e45f07c386894ec3ccf5332bd16"
 dependencies = [
- "prost 0.13.5",
-]
-
-[[package]]
-name = "prost-types"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2bfff0dbd11dbadf180fea466aa146cdf20aed230e1c42b8bae192df8f0469a"
-dependencies = [
- "prost 0.14.0",
+ "prost",
 ]
 
 [[package]]
@@ -3270,7 +3187,7 @@ checksum = "877c5b330756d856ffcc4553ab34a5684481ade925ecc54bcd1bf02b1d0d4d52"
 dependencies = [
  "async-stream",
  "async-trait",
- "axum 0.7.9",
+ "axum",
  "base64",
  "bytes",
  "h2",
@@ -3282,7 +3199,7 @@ dependencies = [
  "hyper-util",
  "percent-encoding",
  "pin-project",
- "prost 0.13.5",
+ "prost",
  "socket2",
  "tokio",
  "tokio-stream",
@@ -3293,44 +3210,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "tonic"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e581ba15a835f4d9ea06c55ab1bd4dce26fc53752c69a04aac00703bfb49ba9"
-dependencies = [
- "async-trait",
- "axum 0.8.4",
- "base64",
- "bytes",
- "h2",
- "http",
- "http-body",
- "http-body-util",
- "hyper",
- "hyper-timeout",
- "hyper-util",
- "percent-encoding",
- "pin-project",
- "prost 0.13.5",
- "socket2",
- "tokio",
- "tokio-stream",
- "tower 0.5.2",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
 name = "tonic-build"
-version = "0.13.1"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eac6f67be712d12f0b41328db3137e0d0757645d8904b4cb7d51cd9c2279e847"
+checksum = "9557ce109ea773b399c9b9e5dca39294110b74f1f342cb347a80d1fce8c26a11"
 dependencies = [
  "prettyplease",
  "proc-macro2",
  "prost-build",
- "prost-types 0.13.5",
+ "prost-types",
  "quote",
  "syn",
 ]
@@ -3363,15 +3251,10 @@ checksum = "d039ad9159c98b70ecfd540b2573b97f7f52c3e8d9f8ad57a24b916a536975f9"
 dependencies = [
  "futures-core",
  "futures-util",
- "indexmap 2.9.0",
  "pin-project-lite",
- "slab",
  "sync_wrapper",
- "tokio",
- "tokio-util",
  "tower-layer",
  "tower-service",
- "tracing",
 ]
 
 [[package]]

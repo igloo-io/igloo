@@ -130,4 +130,11 @@ impl FlightService for IglooflightSqlService {
     ) -> Result<Response<Self::ListActionsStream>, Status> {
         Err(Status::unimplemented("list_actions is not yet implemented"))
     }
+
+    async fn poll_flight_info(
+        &self,
+        _request: Request<FlightDescriptor>,
+    ) -> Result<Response<arrow_flight::PollInfo>, Status> {
+        Err(Status::unimplemented("poll_flight_info is not yet implemented"))
+    }
 }
