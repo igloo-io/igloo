@@ -10,8 +10,10 @@ tokio = { version = "1", features = ["full"] }
 tonic = "0.12"
 prost = "0.13"
 prost-types = "0.13"
+# arrow = { version = "35.0.0" } # Commented out due to persistent compilation issues with transitive dependencies
+
+[dev-dependencies]
+futures = "0.3"
 
 [features]
-default = ["in-memory"]
-# Optional in-memory cache backend
-in-memory = []
+default = []
