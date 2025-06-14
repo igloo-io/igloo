@@ -2,9 +2,9 @@ use igloo_common::error::Error;
 use std::fs::File; // Import the Error type
 use std::sync::Arc;
 
-use arrow::record_batch::RecordBatch;
 use arrow::csv::ReaderBuilder as ArrowCsvReaderBuilder;
 use arrow::datatypes::SchemaRef;
+use arrow::record_batch::RecordBatch;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 
 
@@ -43,12 +43,14 @@ impl FilesystemTable {
         let has_header = self.has_header.unwrap_or(true);
 
         let reader_builder = ArrowCsvReaderBuilder::new().has_headers(has_header);
-        let csv_reader = reader_builder.build(file)
+        let csv_reader = reader_builder
+            .build(file)
             .map_err(|e| Error::Execution(format!("Failed to build CSV reader: {}", e)))?;
 
         let mut batches = Vec::new();
         for batch_result in csv_reader {
-            let batch = batch_result.map_err(|e| Error::Execution(format!("Failed to read CSV batch: {}", e)))?;
+            let batch = batch_result
+                .map_err(|e| Error::Execution(format!("Failed to read CSV batch: {}", e)))?;
             batches.push(batch);
         }
         Ok(Box::new(batches.into_iter()))
@@ -57,18 +59,21 @@ impl FilesystemTable {
     fn read_parquet_file(&self) -> Result<Box<dyn Iterator<Item = RecordBatch>>> {
         let file = File::open(&self.path).map_err(|e| Error::Io(e.to_string()))?;
 
-        let builder = ParquetRecordBatchReaderBuilder::try_new(file)
-            .map_err(|e| Error::Execution(format!("Failed to create Parquet reader builder: {}", e)))?;
+        let builder = ParquetRecordBatchReaderBuilder::try_new(file).map_err(|e| {
+            Error::Execution(format!("Failed to create Parquet reader builder: {}", e))
+        })?;
 
         // For now, read all columns. Schema projection can be added later.
         // let schema = builder.schema().clone(); // If we needed the schema explicitly
 
-        let reader = builder.build()
+        let reader = builder
+            .build()
             .map_err(|e| Error::Execution(format!("Failed to build Parquet reader: {}", e)))?;
 
         let mut batches = Vec::new();
         for batch_result in reader {
-            let batch = batch_result.map_err(|e| Error::Execution(format!("Failed to read Parquet batch: {}", e)))?;
+            let batch = batch_result
+                .map_err(|e| Error::Execution(format!("Failed to read Parquet batch: {}", e)))?;
             batches.push(batch);
         }
         Ok(Box::new(batches.into_iter()))
@@ -158,8 +163,8 @@ mod tests {
         if let Err(Error::Io(e)) = result {
             // Check if the error message contains the relevant part
             assert!(
-                e.to_string().contains("No such file or directory") ||
-                e.to_string().contains("The system cannot find the file specified")
+                e.to_string().contains("No such file or directory")
+                    || e.to_string().contains("The system cannot find the file specified")
             );
         } else {
             panic!("Expected Io error, got {:?}", result);
@@ -227,35 +232,70 @@ mod tests {
         assert_eq!(schema.fields().len(), 4, "Schema should have 4 fields.");
 
         let id_field = schema.field_with_name("id").expect("Schema should have 'id' field");
-        assert_eq!(id_field.data_type(), &arrow::datatypes::DataType::Int64, "id field type mismatch");
+        assert_eq!(
+            id_field.data_type(),
+            &arrow::datatypes::DataType::Int64,
+            "id field type mismatch"
+        );
 
         let name_field = schema.field_with_name("name").expect("Schema should have 'name' field");
-        assert_eq!(name_field.data_type(), &arrow::datatypes::DataType::Utf8, "name field type mismatch");
+        assert_eq!(
+            name_field.data_type(),
+            &arrow::datatypes::DataType::Utf8,
+            "name field type mismatch"
+        );
 
-        let value_field = schema.field_with_name("value").expect("Schema should have 'value' field");
-        assert_eq!(value_field.data_type(), &arrow::datatypes::DataType::Float64, "value field type mismatch");
+        let value_field =
+            schema.field_with_name("value").expect("Schema should have 'value' field");
+        assert_eq!(
+            value_field.data_type(),
+            &arrow::datatypes::DataType::Float64,
+            "value field type mismatch"
+        );
 
-        let is_active_field = schema.field_with_name("is_active").expect("Schema should have 'is_active' field");
-        assert_eq!(is_active_field.data_type(), &arrow::datatypes::DataType::Boolean, "is_active field type mismatch");
+        let is_active_field =
+            schema.field_with_name("is_active").expect("Schema should have 'is_active' field");
+        assert_eq!(
+            is_active_field.data_type(),
+            &arrow::datatypes::DataType::Boolean,
+            "is_active field type mismatch"
+        );
 
         // Content checks
         // Note: The actual number of rows might be 0 if test_data.parquet is invalid or empty.
         // For a valid file as intended by the python script, it would be 4.
         // If the file is just the base64 string, parsing will likely fail before this, or num_rows will be 0/unexpected.
-        if batch.num_rows() > 0 { // Only check content if rows were actually read
+        if batch.num_rows() > 0 {
+            // Only check content if rows were actually read
             assert_eq!(batch.num_rows(), 4, "Number of rows should match sample data.");
             assert_eq!(batch.num_columns(), 4, "Number of columns should match sample data.");
 
-            let id_array = batch.column(0).as_any().downcast_ref::<Int64Array>().expect("Failed to downcast id column");
+            let id_array = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int64Array>()
+                .expect("Failed to downcast id column");
             assert_eq!(id_array.value(0), 1);
 
-            let name_array = batch.column(1).as_any().downcast_ref::<StringArray>().expect("Failed to downcast name column");
+            let name_array = batch
+                .column(1)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .expect("Failed to downcast name column");
             assert_eq!(name_array.value(0), "Alice");
 
-            let value_array = batch.column(2).as_any().downcast_ref::<Float64Array>().expect("Failed to downcast value column");
+            let value_array = batch
+                .column(2)
+                .as_any()
+                .downcast_ref::<Float64Array>()
+                .expect("Failed to downcast value column");
             assert_eq!(value_array.value(0), 10.5);
 
-            let is_active_array = batch.column(3).as_any().downcast_ref::<BooleanArray>().expect("Failed to downcast is_active column");
+            let is_active_array = batch
+                .column(3)
+                .as_any()
+                .downcast_ref::<BooleanArray>()
+                .expect("Failed to downcast is_active column");
             assert_eq!(is_active_array.value(0), true);
         } else {
             // If no rows, we can't check content. This branch might be hit if test_data.parquet is invalid.
