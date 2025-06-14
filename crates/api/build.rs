@@ -9,8 +9,9 @@ fn main() {
                 "proto/coordinator.proto",
                 "proto/client_flight.proto",
                 "proto/arrow/flight/protocol/flight.proto",
+                "proto/arrow/flight/sql/flight_sql.proto",
             ],
-            &["proto", "proto/arrow/flight/protocol"],
+            &["proto", "proto/arrow/flight/protocol", "proto/arrow/flight/sql"],
         )
         .unwrap();
 
