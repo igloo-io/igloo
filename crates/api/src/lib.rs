@@ -1,4 +1,4 @@
-#![allow(clippy::doc_overindented_list_items)]
+// #![allow(clippy::doc_overindented_list_items)]
 // TODO: API crate for gRPC and Arrow Flight definitions
 
 // Re-export the generated proto code
@@ -6,35 +6,38 @@ pub mod igloo {
     include!(concat!(env!("OUT_DIR"), "/igloo.rs")); // Defines FlightService trait
 
     use crate::arrow::flight::protocol::{FlightData, FlightInfo, Ticket};
-    use flight_service_server::FlightService; // Corrected import
+    // use flight_service_server::FlightService; // Corrected import
     use tokio_stream::wrappers::ReceiverStream;
 
-    pub struct IglooFlightSqlService;
+    // pub struct IglooFlightSqlService;
 
-    #[tonic::async_trait]
-    impl FlightService for IglooFlightSqlService {
-        type DoGetStream = ReceiverStream<Result<FlightData, tonic::Status>>;
+    // #[tonic::async_trait]
+    // impl FlightService for IglooFlightSqlService {
+    //     type DoGetStream = ReceiverStream<Result<FlightData, tonic::Status>>;
 
-        async fn get_flight_info(
-            &self,
-            _request: tonic::Request<FlightInfo>,
-        ) -> Result<tonic::Response<FlightInfo>, tonic::Status> {
-            Err(tonic::Status::unimplemented(
-                "IglooFlightSqlService::get_flight_info is not implemented",
-            ))
-        }
+    //     async fn get_flight_info(
+    //         &self,
+    //         _request: tonic::Request<FlightInfo>,
+    //     ) -> Result<tonic::Response<FlightInfo>, tonic::Status> {
+    //         Err(tonic::Status::unimplemented(
+    //             "IglooFlightSqlService::get_flight_info is not implemented",
+    //         ))
+    //     }
 
-        async fn do_get(
-            &self,
-            _request: tonic::Request<Ticket>,
-        ) -> Result<tonic::Response<Self::DoGetStream>, tonic::Status> {
-            Err(tonic::Status::unimplemented("IglooFlightSqlService::do_get is not implemented"))
-        }
-    }
+    //     async fn do_get(
+    //         &self,
+    //         _request: tonic::Request<Ticket>,
+    //     ) -> Result<tonic::Response<Self::DoGetStream>, tonic::Status> {
+    //         Err(tonic::Status::unimplemented("IglooFlightSqlService::do_get is not implemented"))
+    //     }
+    // }
 }
 
 pub mod arrow {
     pub mod flight {
+        pub mod sql {
+            include!(concat!(env!("OUT_DIR"), "/arrow.flight.sql.rs"));
+        }
         pub mod protocol {
             include!(concat!(env!("OUT_DIR"), "/arrow.flight.protocol.rs"));
         }
@@ -46,12 +49,33 @@ use arrow_flight::{
     FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse, PutResult, SchemaResult,
     Ticket,
 };
+use arrow_flight::sql::{
+    ActionClosePreparedStatementRequest, ActionCreatePreparedStatementRequest, CommandStatementQuery,
+    TicketStatementQuery, PreparedStatementQuery, ProstAnyExt, StatementQueryTicket,
+};
 // use crate::arrow::flight::protocol::PollInfo; // Corrected import for PollInfo - now unused
 use futures::Stream;
 use std::pin::Pin;
 use tonic::{Request, Response, Status, Streaming};
 
 pub struct IglooflightSqlService {}
+
+#[tonic::async_trait]
+pub trait FlightSqlService {
+    async fn get_flight_info_sql(
+        &self,
+        query: CommandStatementQuery,
+        request: Request<FlightDescriptor>,
+    ) -> Result<Response<FlightInfo>, Status>;
+
+    async fn do_get_sql(
+        &self,
+        ticket: TicketStatementQuery,
+        request: Request<Ticket>,
+    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status>
+    where
+        Self: FlightService;
+}
 
 #[tonic::async_trait]
 impl FlightService for IglooflightSqlService {
@@ -129,5 +153,34 @@ impl FlightService for IglooflightSqlService {
         _request: Request<Empty>,
     ) -> Result<Response<Self::ListActionsStream>, Status> {
         Err(Status::unimplemented("list_actions is not yet implemented"))
+    }
+
+    async fn poll_flight_info(
+        &self,
+        _request: Request<FlightDescriptor>,
+    ) -> Result<Response<arrow_flight::PollInfo>, Status> {
+        Err(Status::unimplemented("poll_flight_info is not yet implemented"))
+    }
+}
+
+#[tonic::async_trait]
+impl FlightSqlService for IglooflightSqlService {
+    async fn get_flight_info_sql(
+        &self,
+        _query: CommandStatementQuery,
+        _request: Request<FlightDescriptor>,
+    ) -> Result<Response<FlightInfo>, Status> {
+        Err(Status::unimplemented("get_flight_info_sql is not yet implemented"))
+    }
+
+    async fn do_get_sql(
+        &self,
+        _ticket: TicketStatementQuery,
+        _request: Request<Ticket>,
+    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status>
+    where
+        Self: FlightService,
+    {
+        Err(Status::unimplemented("do_get_sql is not yet implemented"))
     }
 }

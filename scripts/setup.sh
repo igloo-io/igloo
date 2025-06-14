@@ -9,20 +9,33 @@ protoc --version || echo "protoc not found"
 cargo fmt --version || echo "cargo fmt not found"
 cargo clippy --version || echo "cargo clippy not found"
 
-# 1. Install Rust toolchain if needed
-if ! command -v rustup &> /dev/null; then
-    echo "Rustup not found. Installing Rust..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    source "$HOME/.cargo/env"
-else
-    echo "Rustup found. Skipping Rust installation."
-fi
+Upgrade the depencies of all creates and workspace to the latest and verify the setup and check.sh# 1. Install or upgrade Rust toolchain if needed
+REQUIRED_RUST_VERSION="1.82.0"
 
-if [ -f rust-toolchain.toml ]; then
-    echo "Setting Rust toolchain from rust-toolchain.toml..."
-    rustup show
+if command -v rustc &> /dev/null; then
+    INSTALLED_RUST_VERSION=$(rustc --version | awk '{print $2}')
+    if [ "$(printf '%s\n' "$REQUIRED_RUST_VERSION" "$INSTALLED_RUST_VERSION" | sort -V | head -n1)" != "$REQUIRED_RUST_VERSION" ]; then
+        echo "Rust version $INSTALLED_RUST_VERSION is less than $REQUIRED_RUST_VERSION. Upgrading..."
+        if command -v rustup &> /dev/null; then
+            rustup install $REQUIRED_RUST_VERSION
+            rustup default $REQUIRED_RUST_VERSION
+        else
+            echo "rustup not found. Installing rustup and Rust $REQUIRED_RUST_VERSION..."
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION
+            source "$HOME/.cargo/env"
+        fi
+    else
+        echo "Rust version $INSTALLED_RUST_VERSION meets requirement."
+    fi
 else
-    echo "No rust-toolchain.toml found. Skipping toolchain setup."
+    echo "rustc not found. Installing Rust $REQUIRED_RUST_VERSION..."
+    if ! command -v rustup &> /dev/null; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION
+        source "$HOME/.cargo/env"
+    else
+        rustup install $REQUIRED_RUST_VERSION
+        rustup default $REQUIRED_RUST_VERSION
+    fi
 fi
 
 # 1b. Ensure clippy and rustfmt are installed
@@ -37,14 +50,14 @@ else
 fi
 
 # 3. Install Python dependencies (if pyproject.toml exists)
-if [ -f python/pyigloo/pyproject.toml ]; then
+if [ -f pyigloo/pyproject.toml ]; then
     echo "Installing Python dependencies for pyigloo..."
     pip install --upgrade pip
     pip install maturin
-    if [ -f python/pyigloo/requirements.txt ]; then
-        pip install -r python/pyigloo/requirements.txt
+    if [ -f pyigloo/requirements.txt ]; then
+        pip install -r pyigloo/requirements.txt
     fi
-    pip install -e python/pyigloo || true
+    pip install -e pyigloo || true
 else
     echo "No pyproject.toml found for Python bindings. Skipping Python deps."
 fi
