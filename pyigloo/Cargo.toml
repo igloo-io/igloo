@@ -8,3 +8,7 @@ name = "pyigloo"
 crate-type = ["cdylib"]
 
 [dependencies]
+arrow-flight = { version = "50.0.0", features = ["flight-sql-client"] }
+pyo3-arrow = "0.10.0"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+pyo3 = { version = "0.21.0", features = ["extension-module"] }
