@@ -61,26 +61,41 @@ fi
 
 # 3. Install Python dependencies (if pyproject.toml exists)
 if [ -f pyigloo/pyproject.toml ]; then
-    echo "Setting up Python virtual environment for pyigloo..."
-    PY_VENV_DIR="pyigloo/.venv"
-    python3 -m venv "$PY_VENV_DIR" || { echo "Failed to create venv. Ensure Python3 and venv module are installed."; exit 1; }
-    # Ensure pip is available in the venv
-    if [ ! -f "$PY_VENV_DIR/bin/pip" ]; then
-        echo "pip not found in venv, attempting to install with ensurepip..."
-        "$PY_VENV_DIR/bin/python" -m ensurepip --upgrade || {
-            echo "ensurepip failed. Attempting to install pip manually...";
-            curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && "$PY_VENV_DIR/bin/python" get-pip.py && rm get-pip.py || {
-                echo "Failed to install pip in venv."; exit 1;
-            }
-        }
+    echo "Setting up Python environment for pyigloo using uv..."
+    # Prefer Homebrew Python on macOS if available
+    PYTHON3_BIN="python3"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [ -x "/opt/homebrew/bin/python3" ]; then
+            PYTHON3_BIN="/opt/homebrew/bin/python3"
+        elif [ -x "/usr/local/bin/python3" ]; then
+            PYTHON3_BIN="/usr/local/bin/python3"
+        fi
     fi
-    source "$PY_VENV_DIR/bin/activate"
-    python -m pip install --upgrade pip
-    python -m pip install maturin
+    echo "Using Python interpreter: $PYTHON3_BIN"
+    # Check if uv is installed, if not, install it using the official script
+    if ! command -v uv &> /dev/null; then
+        echo "Installing uv (Python package manager) using official script..."
+        wget -qO- https://astral.sh/uv/install.sh | sh
+        export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+    else
+        echo "uv is already installed."
+    fi
+    # Create a new Python environment using uv if not already present
+    PY_UV_ENV_DIR="pyigloo/.venv"
+    if [ ! -d "$PY_UV_ENV_DIR" ]; then
+        echo "Creating new Python environment with uv..."
+        uv venv "$PY_UV_ENV_DIR" || { echo "Failed to create Python env with uv."; exit 1; }
+    else
+        echo "Python environment already exists at $PY_UV_ENV_DIR."
+    fi
+    source "$PY_UV_ENV_DIR/bin/activate"
+    # Use uv to install dependencies
+    uv pip install --upgrade pip
+    uv pip install maturin
     if [ -f pyigloo/requirements.txt ]; then
-        python -m pip install -r pyigloo/requirements.txt
+        uv pip install -r pyigloo/requirements.txt
     fi
-    python -m pip install -e pyigloo || true
+    uv pip install -e pyigloo || true
     deactivate
 else
     echo "No pyproject.toml found for Python bindings. Skipping Python deps."
