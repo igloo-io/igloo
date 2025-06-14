@@ -11,7 +11,6 @@
 //! Implement query engine logic
 
 use datafusion::arrow::record_batch::RecordBatch;
-use datafusion::error::DataFusionError;
 use datafusion::execution::context::SessionContext; // Changed this line
 
 pub struct QueryEngine {
@@ -29,9 +28,10 @@ impl QueryEngine {
         QueryEngine { ctx: SessionContext::new() }
     }
 
-    pub async fn execute(&self, sql: &str) -> Result<Vec<RecordBatch>, DataFusionError> {
-        let df = self.ctx.sql(sql).await?;
-        df.collect().await
+    // Modify this function
+    pub async fn execute(&self, sql: &str) -> Vec<RecordBatch> {
+        let df = self.ctx.sql(sql).await.expect("SQL execution failed");
+        df.collect().await.expect("Failed to collect results")
     }
 }
 
@@ -49,7 +49,7 @@ mod tests {
         let sql = "SELECT 42 as answer;";
 
         // Act
-        let results = engine.execute(sql).await.unwrap();
+        let results = engine.execute(sql).await;
 
         // Assert
         assert_eq!(results.len(), 1, "Expected one RecordBatch");
