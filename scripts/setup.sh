@@ -63,20 +63,31 @@ fi
 if [ -f pyigloo/pyproject.toml ]; then
     echo "Setting up Python virtual environment for pyigloo..."
     PY_VENV_DIR="pyigloo/.venv"
-    python3 -m venv "$PY_VENV_DIR"
-    source "$PY_VENV_DIR/bin/activate"
-    pip install --upgrade pip
-    pip install maturin
-    if [ -f pyigloo/requirements.txt ]; then
-        pip install -r pyigloo/requirements.txt
+    python3 -m venv "$PY_VENV_DIR" || { echo "Failed to create venv. Ensure Python3 and venv module are installed."; exit 1; }
+    # Ensure pip is available in the venv
+    if [ ! -f "$PY_VENV_DIR/bin/pip" ]; then
+        echo "pip not found in venv, attempting to install with ensurepip..."
+        "$PY_VENV_DIR/bin/python" -m ensurepip --upgrade || {
+            echo "ensurepip failed. Attempting to install pip manually...";
+            curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && "$PY_VENV_DIR/bin/python" get-pip.py && rm get-pip.py || {
+                echo "Failed to install pip in venv."; exit 1;
+            }
+        }
     fi
-    pip install -e pyigloo || true
+    source "$PY_VENV_DIR/bin/activate"
+    python -m pip install --upgrade pip
+    python -m pip install maturin
+    if [ -f pyigloo/requirements.txt ]; then
+        python -m pip install -r pyigloo/requirements.txt
+    fi
+    python -m pip install -e pyigloo || true
+    deactivate
 else
     echo "No pyproject.toml found for Python bindings. Skipping Python deps."
 fi
 
 # 4. Install pre-commit and set up git hooks
-pip install pre-commit
+python3 -m pip install --user pre-commit
 pre-commit install || true
 
 # 5. Build the Rust workspace
