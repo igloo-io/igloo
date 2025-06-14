@@ -12,3 +12,10 @@ tonic = "0.12"
 prost = "0.13"
 prost-types = "0.13"
 chrono = "0.4"
+
+# Pin DataFusion, Arrow, and Parquet versions to avoid Rust compiler compatibility issues
+# and hopefully reduce pressure on the dependency resolver in the sandbox.
+datafusion = "=35.0.0"
+arrow = "=35.0.0"
+arrow-flight = "=35.0.0"
+parquet = "=35.0.0"

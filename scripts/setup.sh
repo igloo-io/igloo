@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+# ===== Checking preinstalled tool versions =====
 echo "===== Checking preinstalled tool versions ====="
 node -v || echo "Node.js not found"
 python3 --version || echo "Python not found"
@@ -9,7 +10,7 @@ protoc --version || echo "protoc not found"
 cargo fmt --version || echo "cargo fmt not found"
 cargo clippy --version || echo "cargo clippy not found"
 
-Upgrade the depencies of all creates and workspace to the latest and verify the setup and check.sh# 1. Install or upgrade Rust toolchain if needed
+# 1. Install or upgrade Rust toolchain if needed
 REQUIRED_RUST_VERSION="1.82.0"
 
 if command -v rustc &> /dev/null; then
@@ -44,14 +45,26 @@ rustup component add clippy rustfmt
 # 2. Install Protocol Buffers compiler (protoc)
 if ! command -v protoc &> /dev/null; then
     echo "protoc not found. Installing..."
-    sudo apt-get update && sudo apt-get install -y protobuf-compiler
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if command -v brew &> /dev/null; then
+            brew install protobuf
+        else
+            echo "Homebrew not found. Please install Homebrew and rerun the script."
+            exit 1
+        fi
+    else
+        sudo apt-get update && sudo apt-get install -y protobuf-compiler
+    fi
 else
     echo "protoc found. Skipping installation."
 fi
 
 # 3. Install Python dependencies (if pyproject.toml exists)
 if [ -f pyigloo/pyproject.toml ]; then
-    echo "Installing Python dependencies for pyigloo..."
+    echo "Setting up Python virtual environment for pyigloo..."
+    PY_VENV_DIR="pyigloo/.venv"
+    python3 -m venv "$PY_VENV_DIR"
+    source "$PY_VENV_DIR/bin/activate"
     pip install --upgrade pip
     pip install maturin
     if [ -f pyigloo/requirements.txt ]; then

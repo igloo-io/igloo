@@ -120,10 +120,37 @@ impl FlightService for FlightSqlServiceImpl {
 
     async fn get_flight_info(
         &self,
-        _request: Request<FlightDescriptor>,
+        request: Request<FlightDescriptor>,
     ) -> Result<Response<FlightInfo>, Status> {
-        // This will be handled by get_flight_info_sql for SQL queries
-        Err(Status::unimplemented("get_flight_info is not implemented for non-SQL, use get_flight_info_sql"))
+        let flight_descriptor = request.get_ref();
+        if flight_descriptor.r#type == arrow_flight::FlightDescriptorType::Cmd as i32 {
+            // Try to decode the specific SQL command from flight_descriptor.cmd
+            // This requires knowing the expected type or using ProstAnyExt::unpack
+            let any_cmd = prost_types::Any::decode(flight_descriptor.cmd.clone())
+                .map_err(|e| Status::invalid_argument(format!("Failed to decode Any: {}", e)))?;
+
+            // Example: Directly creating CommandStatementQuery for get_flight_info_sql
+            // In a real scenario, you might match on any_cmd.type_url
+            let command_statement_query = if any_cmd.is::<CommandGetCatalogs>() {
+                CommandStatementQuery {
+                    query: String::new(), // Or extract from Any if it was wrapped differently
+                    transaction_id: None, // Or extract if available
+                }
+            } else {
+                // Handle other SQL command types or return unimplemented
+                return Err(Status::unimplemented(format!(
+                    "Unsupported SQL command type_url: {}",
+                    any_cmd.type_url
+                )));
+            };
+
+            // Call the specific SQL handler
+            self.get_flight_info_sql(command_statement_query, request).await
+        } else {
+            Err(Status::unimplemented(
+                "get_flight_info is only implemented for Cmd type descriptors (SQL)",
+            ))
+        }
     }
 
     async fn get_schema(
