@@ -7,11 +7,8 @@ edition = "2021"
 igloo-api = { path = "../api" }
 igloo-common = { path = "../common" }
 igloo-engine = { path = "../engine" }
-arrow-flight = { version = "55.1.0", features = ["flight-sql-experimental"] }
 tokio = { version = "1", features = ["full"] }
-tokio-stream = "0.1"
-tonic = { workspace = true }
-prost = { workspace = true }
-prost-types = { workspace = true }
-chrono = "0.4.31"
-anyhow = "1.0"
+tonic = "0.12"
+prost = "0.13"
+prost-types = "0.13"
+chrono = "0.4"

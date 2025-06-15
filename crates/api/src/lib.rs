@@ -1,4 +1,4 @@
-#![allow(clippy::doc_overindented_list_items)]
+// #![allow(clippy::doc_overindented_list_items)]
 // TODO: API crate for gRPC and Arrow Flight definitions
 
 // Re-export the generated proto code
@@ -133,8 +133,8 @@ impl FlightService for IglooflightSqlService {
 
     async fn poll_flight_info(
         &self,
-        _request: tonic::Request<arrow_flight::FlightDescriptor>,
-    ) -> Result<tonic::Response<arrow_flight::PollInfo>, tonic::Status> {
-        Err(tonic::Status::unimplemented("poll_flight_info not implemented"))
+        _request: Request<FlightDescriptor>,
+    ) -> Result<Response<arrow_flight::PollInfo>, Status> {
+        Err(Status::unimplemented("poll_flight_info is not yet implemented"))
     }
 }

@@ -9,5 +9,6 @@ tokio = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
-sqlparser = "0.56.0"
-anyhow = "1.0"
+sqlparser = "0.56.0" # This was existing, keep it for now, might remove later if DataFusion makes it redundant.
+datafusion = "48.0.0"
+# arrow dependency removed for now

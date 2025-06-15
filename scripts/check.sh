@@ -13,4 +13,6 @@ cargo build --workspace --all-targets
 echo "Running cargo test..."
 cargo test --workspace --all-targets
 
-echo "\nAll checks passed!" 
+echo
+
+echo "All checks passed!"

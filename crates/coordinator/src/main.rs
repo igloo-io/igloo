@@ -1,37 +1,42 @@
-// Import the FlightSqlServiceServer
-use anyhow::Error;
-use arrow_flight::flight_service_server::FlightServiceServer as FlightSqlServiceServer;
-use igloo_engine::QueryEngine;
-use service::CoordinatorService; // Your new service
-use std::net::SocketAddr;
-use tokio::signal;
-use tonic::transport::Server;
+// Keep necessary imports from the old main.rs if they are still needed for the new setup
+// For example, SocketAddr, Arc, Mutex, Server, signal might still be relevant for the new service.
+// However, specific service imports like MyCoordinatorService will be replaced.
 
-// Reference the service module
-mod service;
+use igloo_api::flight_sql_service_server::FlightSqlServiceServer; // Corrected import
+use igloo_engine::QueryEngine;
+use std::net::SocketAddr;
+use tonic::transport::Server;
+use tokio::signal; // For graceful shutdown
+
+// Modules declared previously
+mod flight_sql_service;
+mod legacy_service; // Keep if other parts of the binary still use it, otherwise remove. For now, assume it might be used.
+
+// Use the new service
+use flight_sql_service::FlightSqlServiceImpl;
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
-    // Define the server address
-    let addr: SocketAddr = "[::1]:50051".parse()?;
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let addr: SocketAddr = "[::1]:50051".parse()?; // Using [::1] for IPv6 loopback as specified in the issue
 
-    // Create an instance of the QueryEngine
-    // This assumes QueryEngine::new() is the correct way to instantiate it.
-    // Adjust if QueryEngine has a different constructor.
-    let engine = QueryEngine::new().await?;
+    // 1. Create an instance of the igloo_engine::QueryEngine.
+    // For now, QueryEngine::new() might be a placeholder if it needs configuration.
+    // Assuming QueryEngine::new() is the correct way to instantiate it.
+    let engine = QueryEngine::new();
 
-    // Create an instance of CoordinatorService
-    let coordinator_service = CoordinatorService { engine };
+    // 2. Create an instance of your CoordinatorService (FlightSqlServiceImpl), passing the engine to it.
+    let flight_sql_service = FlightSqlServiceImpl { engine };
 
-    // Print confirmation message
+    // 3. Print a confirmation message to the console before serving.
     println!("Coordinator listening on {}", addr);
 
-    // Setup and run the gRPC server
+    // 4. Create a new tonic::transport::Server.
+    // 5. Add your service to the server and call .serve(addr).await?.
+    // Incorporating graceful shutdown as was present in the original main.rs
     Server::builder()
-        // Add the FlightSqlService implementation
-        .add_service(FlightSqlServiceServer::new(coordinator_service))
+        .add_service(FlightSqlServiceServer::new(flight_sql_service)) // Use FlightSqlServiceServer
         .serve_with_shutdown(addr, async {
-            signal::ctrl_c().await.expect("failed to listen for event");
+            signal::ctrl_c().await.expect("failed to listen for SIGINT");
             println!("Shutting down coordinator gracefully...");
         })
         .await?;
