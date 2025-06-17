@@ -12,6 +12,7 @@
 
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::execution::context::SessionContext; // Changed this line
+use std::sync::Arc; // Added based on subtask description note
 
 pub struct QueryEngine {
     ctx: SessionContext,
@@ -26,6 +27,14 @@ impl Default for QueryEngine {
 impl QueryEngine {
     pub fn new() -> Self {
         QueryEngine { ctx: SessionContext::new() }
+    }
+
+    pub fn register_table(
+        &self,
+        name: &str,
+        table: Arc<dyn datafusion::datasource::TableProvider>,
+    ) -> datafusion::error::Result<Option<Arc<dyn datafusion::datasource::TableProvider>>> {
+        self.ctx.register_table(name, table)
     }
 
     // Modify this function

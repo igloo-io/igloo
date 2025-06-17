@@ -12,3 +12,6 @@ tonic = "0.12"
 prost = "0.13"
 prost-types = "0.13"
 chrono = "0.4"
+datafusion = "48.0.0"
+igloo-connector-filesystem = { path = "../connectors/filesystem" }
+object_store = "0.9"
