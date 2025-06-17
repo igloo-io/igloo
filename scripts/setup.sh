@@ -121,7 +121,7 @@ install_precommit
 
 echo "===== Building Rust workspace ====="
 # The -Z flag is a fallback; the updated rust version should handle the lockfile
-cargo -Z next-lockfile-bump build --workspace --all-targets
+cargo build --workspace --all-targets
 
 echo "===== Running pre-commit checks ====="
 pre-commit run --all-files || true
