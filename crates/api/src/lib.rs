@@ -9,10 +9,8 @@ pub mod igloo {
     use flight_service_server::FlightService; // Corrected import
     use tokio_stream::wrappers::ReceiverStream;
 
-    pub struct IglooFlightSqlService;
-
     #[tonic::async_trait]
-    impl FlightService for IglooFlightSqlService {
+    impl FlightService for super::IglooFlightSqlService {
         type DoGetStream = ReceiverStream<Result<FlightData, tonic::Status>>;
 
         async fn get_flight_info(
@@ -42,19 +40,31 @@ pub mod arrow {
 }
 
 use arrow_flight::{
-    flight_service_server::FlightService, Action, ActionType, Criteria, Empty, FlightData,
-    FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse, PutResult, SchemaResult,
-    Ticket,
+    flight_service_server::FlightService, /*Action, ActionType, Criteria, Empty,*/
 };
-// use crate::arrow::flight::protocol::PollInfo; // Corrected import for PollInfo - now unused
+use arrow_flight::{
+    Action, ActionType, Criteria, Empty, FlightData, FlightDescriptor, FlightInfo,
+    HandshakeRequest, HandshakeResponse, PutResult, SchemaAsIpc, SchemaResult, Ticket,
+};
+use datafusion::arrow::ipc::writer::IpcWriteOptions;
 use futures::Stream;
+use igloo_engine::QueryEngine;
 use std::pin::Pin;
+use std::sync::Arc;
 use tonic::{Request, Response, Status, Streaming};
 
-pub struct IglooflightSqlService {}
+pub struct IglooFlightSqlService {
+    engine: Arc<QueryEngine>,
+}
+
+impl IglooFlightSqlService {
+    pub fn new(engine: QueryEngine) -> Self {
+        Self { engine: Arc::new(engine) }
+    }
+}
 
 #[tonic::async_trait]
-impl FlightService for IglooflightSqlService {
+impl FlightService for IglooFlightSqlService {
     type HandshakeStream =
         Pin<Box<dyn Stream<Item = Result<HandshakeResponse, Status>> + Send + 'static>>;
     type ListFlightsStream =
@@ -84,9 +94,22 @@ impl FlightService for IglooflightSqlService {
 
     async fn get_flight_info(
         &self,
-        _request: Request<FlightDescriptor>,
+        request: Request<FlightDescriptor>,
     ) -> Result<Response<FlightInfo>, Status> {
-        Err(Status::unimplemented("get_flight_info is not yet implemented"))
+        let descriptor = request.into_inner();
+        let cmd_bytes = descriptor.cmd;
+        if cmd_bytes.is_empty() {
+            return Err(Status::invalid_argument("No SQL command in FlightDescriptor"));
+        }
+        let sql = String::from_utf8(cmd_bytes.to_vec()).unwrap_or_default();
+        let batches = self.engine.execute(&sql).await;
+        let schema = batches.first().map(|b| b.schema()).ok_or(Status::not_found("No results"))?;
+        let options = IpcWriteOptions::default();
+        let schema_ipc = SchemaAsIpc::new(schema.as_ref(), &options);
+        let flight_data = FlightData::from(schema_ipc);
+        let schema_bytes = flight_data.data_header;
+        let flight_info = FlightInfo { schema: schema_bytes, ..Default::default() };
+        Ok(Response::new(flight_info))
     }
 
     async fn get_schema(

@@ -11,6 +11,9 @@ prost-types = { workspace = true }
 arrow-flight = "55.1.0"
 futures = "0.3"
 tokio-stream = "0.1"
+igloo-engine = { path = "../engine" }
+datafusion = "48.0.0"
+arrow = "55.1.0"
 
 [build-dependencies]
 tonic-build = "0.12"

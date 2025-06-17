@@ -1,5 +1,4 @@
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
-use datafusion::arrow::util::pretty::print_batches;
 use datafusion::datasource::file_format::csv::CsvFormat;
 use datafusion::datasource::listing::{
     ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
@@ -8,6 +7,11 @@ use igloo_engine::QueryEngine;
 use std::sync::Arc;
 
 mod service;
+
+use arrow_flight::flight_service_server::FlightServiceServer;
+use igloo_api::IglooFlightSqlService;
+use std::net::SocketAddr;
+use tonic::transport::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,27 +38,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let provider = ListingTable::try_new(config)?;
     engine.register_table("test_table", Arc::new(provider))?;
 
-    // 3. Run the query
-    let sql = "SELECT col_a, col_b FROM test_table LIMIT 5;";
-    let batches = engine.execute(sql).await;
-
-    // 4. Print the results
-    print_batches(&batches)?;
+    // Start Arrow Flight SQL server
+    let addr: SocketAddr = "127.0.0.1:50051".parse()?;
+    let flight_service = IglooFlightSqlService::new(engine.clone());
+    println!("Coordinator Flight SQL listening on {}", addr);
+    Server::builder()
+        .add_service(FlightServiceServer::new(flight_service))
+        .serve_with_shutdown(addr, async {
+            tokio::signal::ctrl_c().await.expect("failed to listen for event");
+            println!("Shutting down coordinator gracefully...");
+        })
+        .await?;
     Ok(())
-
-    // let addr: SocketAddr = "127.0.0.1:50051".parse()?;
-    // let cluster: ClusterState = Arc::new(Mutex::new(HashMap::new()));
-    // let svc = MyCoordinatorService { cluster };
-    // let igloo_flight_sql_service_instance = IglooFlightSqlService {}; // Assuming a simple struct instantiation for now
-    //                                                                   // Start gRPC server with graceful shutdown
-    // println!("Coordinator listening on {}", addr);
-    // Server::builder()
-    //     .add_service(CoordinatorServiceServer::new(svc)) // Existing service
-    //     .add_service(FlightServiceServer::new(igloo_flight_sql_service_instance)) // New Flight SQL service
-    //     .serve_with_shutdown(addr, async {
-    //         signal::ctrl_c().await.expect("failed to listen for event");
-    //         println!("Shutting down coordinator gracefully...");
-    //     })
-    //     .await?;
-    // Ok(())
 }

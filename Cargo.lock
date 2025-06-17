@@ -1897,8 +1897,11 @@ dependencies = [
 name = "igloo-api"
 version = "0.1.0"
 dependencies = [
+ "arrow",
  "arrow-flight",
+ "datafusion",
  "futures",
+ "igloo-engine",
  "prost",
  "prost-types",
  "tokio",
@@ -1992,6 +1995,7 @@ dependencies = [
 name = "igloo-coordinator"
 version = "0.1.0"
 dependencies = [
+ "arrow-flight",
  "chrono",
  "datafusion",
  "igloo-api",

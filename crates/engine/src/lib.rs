@@ -14,6 +14,7 @@ use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::execution::context::SessionContext; // Changed this line
 use std::sync::Arc; // Added based on subtask description note
 
+#[derive(Clone)] // Added Clone derive
 pub struct QueryEngine {
     ctx: SessionContext,
 }
