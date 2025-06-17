@@ -1,10 +1,12 @@
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::util::pretty::print_batches;
 use datafusion::datasource::file_format::csv::CsvFormat;
-use datafusion::datasource::listing::{ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl};
+use datafusion::datasource::listing::{
+    ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
+};
 use igloo_engine::QueryEngine;
-use std::sync::Arc;
-use std::path::Path; // For path operations
+use std::path::Path;
+use std::sync::Arc; // For path operations
 
 mod service;
 
@@ -33,10 +35,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Field::new("col_a", DataType::Int64, false),
             Field::new("col_b", DataType::Utf8, false),
         ])))
-        .with_listing_options(Arc::new(
+        .with_listing_options(
             ListingOptions::new(Arc::new(CsvFormat::default().with_has_header(true)))
                 .with_file_extension(".csv"),
-        ));
+        );
 
     let table_provider = Arc::new(ListingTable::try_new(config)?);
     engine.register_table("test_table", table_provider)?;
