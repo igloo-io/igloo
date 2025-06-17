@@ -11,10 +11,10 @@
 //! Implement query engine logic
 
 use datafusion::arrow::record_batch::RecordBatch;
-use datafusion::execution::context::SessionContext; // Changed this line
-use std::sync::Arc; // Added based on subtask description note
+use datafusion::execution::context::SessionContext;
+use std::sync::Arc;
 
-#[derive(Clone)] // Added Clone derive
+#[derive(Clone)]
 pub struct QueryEngine {
     ctx: SessionContext,
 }
@@ -38,7 +38,6 @@ impl QueryEngine {
         self.ctx.register_table(name, table)
     }
 
-    // Modify this function
     pub async fn execute(&self, sql: &str) -> Vec<RecordBatch> {
         let df = self.ctx.sql(sql).await.expect("SQL execution failed");
         df.collect().await.expect("Failed to collect results")
@@ -48,9 +47,9 @@ impl QueryEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datafusion::arrow::array::Int64Array; // Changed from Int32Array
-    use datafusion::arrow::datatypes::{DataType, Field, Schema}; // Changed this line
-    use std::sync::Arc; // Added based on subtask description note
+    use datafusion::arrow::array::Int64Array;
+    use datafusion::arrow::datatypes::{DataType, Field, Schema};
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn can_execute_simple_query() {
@@ -67,7 +66,7 @@ mod tests {
         let batch = &results[0];
 
         // Check schema
-        let expected_schema = Schema::new(vec![Field::new("answer", DataType::Int64, false)]); // Changed Int32 to Int64
+        let expected_schema = Schema::new(vec![Field::new("answer", DataType::Int64, false)]);
         assert_eq!(batch.schema(), Arc::new(expected_schema), "Schema mismatch");
 
         // Check data
@@ -76,8 +75,8 @@ mod tests {
             .column_by_name("answer")
             .expect("answer column not found")
             .as_any()
-            .downcast_ref::<Int64Array>() // Changed from Int32Array
-            .expect("Failed to downcast to Int64Array"); // Changed message
+            .downcast_ref::<Int64Array>()
+            .expect("Failed to downcast to Int64Array");
 
         assert_eq!(answer_column.value(0), 42, "Incorrect value in answer column");
     }

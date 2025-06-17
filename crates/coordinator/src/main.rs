@@ -1,10 +1,10 @@
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
+use datafusion::arrow::util::pretty::print_batches;
 use datafusion::datasource::file_format::csv::CsvFormat;
-use datafusion::datasource::listing::{
-    ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
-};
+use datafusion::datasource::listing::{ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl};
 use igloo_engine::QueryEngine;
 use std::sync::Arc;
+use std::path::Path; // For path operations
 
 mod service;
 
@@ -19,29 +19,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let engine = QueryEngine::new();
 
     // 2. Register the CSV as a table
-    let csv_path = "../connectors/filesystem/test_data.csv";
-    let abs_csv_path = std::fs::canonicalize(csv_path)?;
-    let abs_dir = abs_csv_path.parent().unwrap();
-    let dir_url = format!("file://{}", abs_dir.display());
-    let file_url = format!("file://{}", abs_csv_path.display());
-    println!("Resolved CSV path: {}", abs_csv_path.display());
-    let table_url = ListingTableUrl::parse(&dir_url)?;
-    let schema = Arc::new(Schema::new(vec![
-        Field::new("col_a", DataType::Int64, false),
-        Field::new("col_b", DataType::Utf8, false),
-    ]));
-    let format = Arc::new(CsvFormat::default().with_has_header(true));
-    let options = ListingOptions::new(format).with_file_extension(".csv".to_string());
-    let mut config =
-        ListingTableConfig::new(table_url).with_schema(schema).with_listing_options(options);
-    config.table_paths = vec![ListingTableUrl::parse(&file_url)?];
-    let provider = ListingTable::try_new(config)?;
-    engine.register_table("test_table", Arc::new(provider))?;
+    let csv_relative_path = "../connectors/filesystem/test_data.csv";
+    let base_path = std::env::current_dir()?; // Assuming run from workspace root
+    let csv_abs_path = base_path.join(Path::new(csv_relative_path));
 
-    // Start Arrow Flight SQL server
+    let table_path_url_str = format!("file://{}", csv_abs_path.display());
+    let table_path = ListingTableUrl::parse(&table_path_url_str)?;
+
+    println!("Attempting to register test_table with path: {}", csv_abs_path.display());
+
+    let config = ListingTableConfig::new(table_path)
+        .with_schema(Arc::new(Schema::new(vec![
+            Field::new("col_a", DataType::Int64, false),
+            Field::new("col_b", DataType::Utf8, false),
+        ])))
+        .with_listing_options(Arc::new(
+            ListingOptions::new(Arc::new(CsvFormat::default().with_has_header(true)))
+                .with_file_extension(".csv"),
+        ));
+
+    let table_provider = Arc::new(ListingTable::try_new(config)?);
+    engine.register_table("test_table", table_provider)?;
+    println!("Registered test_table successfully.");
+
+    // 3. Execute a simple query
+    let sql = "SELECT col_a, col_b FROM test_table LIMIT 5;";
+    println!("Executing SQL: {}", sql);
+    let results = engine.execute(sql).await;
+
+    // 4. Print results
+    println!("Query Results:");
+    match print_batches(&results) {
+        Ok(_) => {} // Already prints to stdout
+        Err(e) => eprintln!("Error printing batches: {}", e),
+    }
+    println!("Finished printing query results.");
+
+    // Keep the existing Flight SQL server setup
     let addr: SocketAddr = "127.0.0.1:50051".parse()?;
-    let flight_service = IglooFlightSqlService::new(engine.clone());
+    let flight_service = IglooFlightSqlService::new(engine.clone()); // engine is cloned
     println!("Coordinator Flight SQL listening on {}", addr);
+
     Server::builder()
         .add_service(FlightServiceServer::new(flight_service))
         .serve_with_shutdown(addr, async {
@@ -49,5 +67,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Shutting down coordinator gracefully...");
         })
         .await?;
+
     Ok(())
 }
