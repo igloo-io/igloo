@@ -4,31 +4,6 @@
 // Re-export the generated proto code
 pub mod igloo {
     include!(concat!(env!("OUT_DIR"), "/igloo.rs")); // Defines FlightService trait
-
-    use crate::arrow::flight::protocol::{FlightData, FlightInfo, Ticket};
-    use flight_service_server::FlightService; // Corrected import
-    use tokio_stream::wrappers::ReceiverStream;
-
-    #[tonic::async_trait]
-    impl FlightService for super::IglooFlightSqlService {
-        type DoGetStream = ReceiverStream<Result<FlightData, tonic::Status>>;
-
-        async fn get_flight_info(
-            &self,
-            _request: tonic::Request<FlightInfo>,
-        ) -> Result<tonic::Response<FlightInfo>, tonic::Status> {
-            Err(tonic::Status::unimplemented(
-                "IglooFlightSqlService::get_flight_info is not implemented",
-            ))
-        }
-
-        async fn do_get(
-            &self,
-            _request: tonic::Request<Ticket>,
-        ) -> Result<tonic::Response<Self::DoGetStream>, tonic::Status> {
-            Err(tonic::Status::unimplemented("IglooFlightSqlService::do_get is not implemented"))
-        }
-    }
 }
 
 pub mod arrow {
@@ -121,9 +96,45 @@ impl FlightService for IglooFlightSqlService {
 
     async fn do_get(
         &self,
-        _request: Request<Ticket>,
+        request: Request<Ticket>,
     ) -> Result<Response<Self::DoGetStream>, Status> {
-        Err(Status::unimplemented("do_get is not yet implemented"))
+        use tokio::sync::mpsc;
+        use tokio_stream::wrappers::ReceiverStream;
+
+        let ticket = request.into_inner();
+        let sql = match String::from_utf8(ticket.ticket.to_vec()) {
+            Ok(s) => s,
+            Err(_) => return Err(Status::invalid_argument("Ticket is not valid UTF-8")),
+        };
+
+        let batches = self.engine.execute(&sql).await;
+        let (tx, rx) = mpsc::channel(2);
+
+        tokio::spawn(async move {
+            if batches.is_empty() {
+                let _ = tx.send(Err(Status::not_found("No results for query"))).await;
+                return;
+            }
+            let schema = batches[0].schema();
+            match arrow_flight::utils::batches_to_flight_data(schema.as_ref(), batches) {
+                Ok(flight_data_vec) => {
+                    for flight_data in flight_data_vec {
+                        if tx.send(Ok(flight_data)).await.is_err() {
+                            break;
+                        }
+                    }
+                }
+                Err(e) => {
+                    let _ = tx
+                        .send(Err(Status::internal(format!(
+                            "Failed to convert RecordBatches: {e}"
+                        ))))
+                        .await;
+                }
+            }
+        });
+
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::DoGetStream))
     }
 
     async fn do_put(
