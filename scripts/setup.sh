@@ -2,7 +2,7 @@
 set -eux
 
 # ===== Helper Functions =====
-
+export CARGO_BUILD_JOBS=2
 check_tool_versions() {
     echo "===== Checking preinstalled tool versions ====="
     for cmd in "node -v" "python3 --version" "rustc --version" "protoc --version" "cargo fmt --version" "cargo clippy --version"; do
@@ -98,6 +98,20 @@ install_precommit() {
     pre-commit install || true
 }
 
+cleanup_redundant_files() {
+    echo "Cleaning up redundant files..."
+    # Remove Python bytecode and cache
+    find . -type d -name '__pycache__' -exec rm -rf {} +
+    find . -type f -name '*.pyc' -delete
+    # Remove Python egg-info directories
+    find pyigloo -type d -name '*.egg-info' -exec rm -rf {} +
+    # Remove temporary files
+    find . -type f -name '*.tmp' -delete
+    find . -type f -name '*.log' -delete
+    # Optionally, remove Rust build artifacts for a clean build (uncomment if desired)
+    # rm -rf target/
+}
+
 # ===== Main Script Execution =====
 
 # Run initial version check
@@ -116,6 +130,9 @@ export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 # Now install Python/pre-commit dependencies which rely on the new PATH
 setup_python_env
 install_precommit
+
+# Clean up redundant files after dependency installation
+cleanup_redundant_files
 
 # --- Run project commands ---
 
