@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -eux
 
 # ===== Helper Functions =====
 
@@ -11,33 +11,26 @@ check_tool_versions() {
 }
 
 install_rust() {
-    REQUIRED_RUST_VERSION="1.82.0"
-    if command -v rustc &> /dev/null; then
-        INSTALLED_RUST_VERSION=$(rustc --version | awk '{print $2}')
-        if [[ "$(printf '%s\n' "$REQUIRED_RUST_VERSION" "$INSTALLED_RUST_VERSION" | sort -V | head -n1)" != "$REQUIRED_RUST_VERSION" ]]; then
-            echo "Rust version $INSTALLED_RUST_VERSION is less than $REQUIRED_RUST_VERSION. Upgrading..."
-            if command -v rustup &> /dev/null; then
-                rustup install $REQUIRED_RUST_VERSION
-                rustup default $REQUIRED_RUST_VERSION
-            else
-                echo "rustup not found. Installing rustup and Rust $REQUIRED_RUST_VERSION..."
-                curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION
-                source "$HOME/.cargo/env"
-            fi
-        else
-            echo "Rust version $INSTALLED_RUST_VERSION meets requirement."
-        fi
-    else
-        echo "rustc not found. Installing Rust $REQUIRED_RUST_VERSION..."
-        if ! command -v rustup &> /dev/null; then
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION
-            source "$HOME/.cargo/env"
-        else
-            rustup install $REQUIRED_RUST_VERSION
-            rustup default $REQUIRED_RUST_VERSION
-        fi
+    # On Linux, remove system-installed rustc to avoid conflicts with rustup
+    if [[ "$OSTYPE" != "darwin"* ]]; then
+        echo "Removing system-installed Rust to prevent conflicts..."
+        sudo apt-get remove -y rustc cargo || true
     fi
+
+    REQUIRED_RUST_VERSION="1.82.0"
+    # Always use rustup to manage the toolchain for consistency
+    echo "Installing Rust $REQUIRED_RUST_VERSION via rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION --no-modify-path
+    
+    # Source the environment directly to update the current shell
+    source "$HOME/.cargo/env"
+
+    # Verify the correct version is now active
+    INSTALLED_RUST_VERSION=$(rustc --version | awk '{print $2}')
+    echo "Successfully installed Rust. Active version: $INSTALLED_RUST_VERSION"
+
     # Ensure additional components are installed
+    echo "Installing clippy and rustfmt components..."
     rustup component add clippy rustfmt
 }
 
@@ -73,8 +66,8 @@ setup_python_env() {
         echo "Using Python interpreter: $PYTHON3_BIN"
         if ! command -v uv &> /dev/null; then
             echo "Installing uv (Python package manager)..."
-            wget -qO- https://astral.sh/uv/install.sh | sh
-            export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+            # Use a more direct installation method for uv
+            cargo install uv
         else
             echo "uv is already installed."
         fi
@@ -99,29 +92,35 @@ setup_python_env() {
 }
 
 install_precommit() {
+    echo "Installing pre-commit..."
     python3 -m pip install --user pre-commit
+    # The pre-commit executable is in ~/.local/bin, which is now in PATH
     pre-commit install || true
 }
 
 # ===== Main Script Execution =====
 
+# Run initial version check
 check_tool_versions
 
-# Run independent installation tasks in parallel
-install_rust &
-pid_rust=$!
-install_protoc &
-pid_protoc=$!
-setup_python_env &
-pid_python=$!
-install_precommit &
-pid_precommit=$!
+# --- Run installation tasks sequentially to ensure correct PATH propagation ---
 
-# Wait for all parallel tasks to complete
-wait $pid_rust $pid_protoc $pid_python $pid_precommit
+# Install core dependencies first
+install_rust
+install_protoc
+
+# Export the correct PATH to be used by all subsequent steps in this script
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+
+# Now install Python/pre-commit dependencies which rely on the new PATH
+setup_python_env
+install_precommit
+
+# --- Run project commands ---
 
 echo "===== Building Rust workspace ====="
-cargo build --workspace --all-targets
+# Add the -Z flag as a fallback, though the updated rust version should handle it
+cargo -Z next-lockfile-bump build --workspace --all-targets
 
 echo "===== Running pre-commit checks ====="
 pre-commit run --all-files || true
