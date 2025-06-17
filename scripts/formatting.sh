@@ -4,17 +4,19 @@ set -eux
 # ===== Formatting and Linting for Rust and Python =====
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 
-# Rust formatting and linting
+# Rust formatting and linting (run in sequence for clarity, but could be parallelized if needed)
 cargo fmt --all
 cargo clippy --all-targets --all-features -- -D warnings
 
-# Python formatting (if desired, e.g. with black)
+# Python formatting (only if there are Python files)
 if [ -d pyigloo ]; then
-    source pyigloo/.venv/bin/activate || true
-    if command -v black &> /dev/null; then
-        black pyigloo
+    if find pyigloo -name '*.py' | grep -q .; then
+        source pyigloo/.venv/bin/activate || true
+        if command -v ruff &> /dev/null; then
+            ruff format --line-length 120 pyigloo
+        fi
+        deactivate || true
     fi
-    deactivate || true
 fi
 
 echo -e "\n✅ Formatting and linting complete!"

@@ -3,33 +3,36 @@ set -eux
 
 # ===== Initial Setup: tools, dependencies, envs =====
 
-# 1. Check tool versions
+# 1. Check tool versions (run in background for speed)
 for cmd in "node -v" "python3 --version" "rustc --version" "protoc --version" "cargo fmt --version" "cargo clippy --version"; do
-    eval $cmd || echo "$cmd not found"
+    eval $cmd || echo "$cmd not found" &
 done
+wait
 
-# 2. Install Rust toolchain
+# 2. Install Rust toolchain only if not already installed
 REQUIRED_RUST_VERSION="1.87.0"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS-specific logic (unchanged)
-    echo "Installing Rust $REQUIRED_RUST_VERSION via rustup..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION --no-modify-path
-    source "$HOME/.cargo/env"
-    echo "Successfully installed Rust. Active version: $(rustc --version | awk '{print $2}')"
-    echo "Installing clippy and rustfmt components..."
-    rustup component add clippy rustfmt
+INSTALLED_RUST_VERSION=$(rustc --version 2>/dev/null | awk '{print $2}')
+if [[ "$INSTALLED_RUST_VERSION" != "$REQUIRED_RUST_VERSION" ]]; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "Installing Rust $REQUIRED_RUST_VERSION via rustup..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION --no-modify-path
+        source "$HOME/.cargo/env"
+        echo "Successfully installed Rust. Active version: $(rustc --version | awk '{print $2}')"
+        echo "Installing clippy and rustfmt components..."
+        rustup component add clippy rustfmt
+    else
+        echo "Removing system-installed Rust to prevent conflicts..."
+        sudo apt-get remove -y rustc cargo || true
+        sudo apt-get update
+        sudo apt-get install -y curl python3-pip build-essential pkg-config libssl-dev protobuf-compiler
+    fi
 else
-    # Ubuntu/Debian logic
-    echo "Removing system-installed Rust to prevent conflicts..."
-    sudo apt-get remove -y rustc cargo || true
-    sudo apt-get update
-    sudo apt-get install -y curl python3-pip build-essential pkg-config libssl-dev protobuf-compiler
+    echo "Rust $REQUIRED_RUST_VERSION already installed. Skipping."
 fi
-
 
 # 3. Install protoc (already handled above for Ubuntu)
 if ! command -v protoc &> /dev/null; then
-        echo "protoc not found. Installing..."
+    echo "protoc not found. Installing..."
     if [[ "$OSTYPE" == "darwin"* ]]; then
         if command -v brew &> /dev/null; then
             brew install protobuf
@@ -81,14 +84,16 @@ else
     echo "pyproject.toml not found for Python bindings. Skipping Python deps."
 fi
 
-# 5. Install pre-commit
-python3 -m pip install --user pre-commit
+# 5. Install pre-commit only if not already installed
+if ! command -v pre-commit &> /dev/null; then
+    python3 -m pip install --user pre-commit
+fi
 pre-commit install || true
 
-# 6. Cleanup
-find . -type d -name '__pycache__' -exec rm -rf {} +
+# 6. Cleanup (use -prune for speed)
+find . -type d -name '__pycache__' -prune -exec rm -rf {} +
 find . -type f -name '*.pyc' -delete
-find pyigloo -type d -name '*.egg-info' -exec rm -rf {} +
+find pyigloo -type d -name '*.egg-info' -prune -exec rm -rf {} +
 find . -type f -name '*.tmp' -delete
 find . -type f -name '*.log' -delete
 # Uncomment the next line to remove Rust build artifacts for a clean build
