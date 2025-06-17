@@ -5,7 +5,10 @@ edition = "2021"
 
 [dependencies]
 igloo-api = { path = "../api" }
+arrow-flight = { version = "52.0.0", features = ["flight-sql-experimental"] }
+tonic = { version = "0.12", features = ["transport"] }
 tokio = { version = "1", features = ["full"] }
-tonic = "0.12"
+futures = "0.3"
+arrow-ipc = { version = "52.0.0", features = ["ipc_file"] }
 prost = "0.13"
 prost-types = "0.13"

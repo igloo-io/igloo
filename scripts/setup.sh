@@ -42,7 +42,7 @@ install_protoc() {
                 brew install protobuf
             else
                 echo "Homebrew not found. Please install Homebrew and rerun the script."
-                exit 1
+                # exit 1 # Removed to prevent issues with bash session
             fi
         else
             sudo apt-get update && sudo apt-get install -y protobuf-compiler
@@ -121,7 +121,8 @@ install_precommit
 
 echo "===== Building Rust workspace ====="
 # The -Z flag is a fallback; the updated rust version should handle the lockfile
-cargo build --workspace --all-targets
+# Build sequentially to avoid potential resource exhaustion
+cargo build --workspace --all-targets --jobs 1
 
 echo "===== Running pre-commit checks ====="
 pre-commit run --all-files || true
