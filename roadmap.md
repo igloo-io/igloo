@@ -11,15 +11,15 @@ The primary focus of this phase is to replace the foundational components of Igl
 * **Integrate Apache Arrow DataFusion as the Core Query Engine:**
     * **Description:** We will replace our custom `igloo-engine` components with Apache Arrow DataFusion.  DataFusion is a powerful and extensible query engine that will provide us with a state-of-the-art planner, optimizer, and execution runtime.
     * **Key Tasks:**
-        * [ ] Replace `logical_plan.rs` and `physical_plan.rs` with DataFusion's `LogicalPlan` and `ExecutionPlan`.
-        * [ ] Use DataFusion's SQL parser and planner to handle incoming queries.
+        * [✅] Replace `logical_plan.rs` and `physical_plan.rs` with DataFusion's `LogicalPlan` and `ExecutionPlan`.
+        * [✅] Use DataFusion's SQL parser and planner to handle incoming queries.
         * [ ] Implement a custom `TableProvider` for our caching layer to allow DataFusion to query it directly.
         * [ ] Benchmark the new engine against the old one to quantify performance improvements.
 
 * **Implement Apache Arrow Flight SQL for Data Transport:**
     * **Description:** We will replace our current gRPC-based communication with Apache Arrow Flight SQL. This will dramatically improve data transfer speeds between the client, coordinator, and workers, and reduce serialization overhead.
     * **Key Tasks:**
-        * [ ] Define a `FlightSqlService` in the `api` crate that implements the `FlightService` trait.
+        * [✅] Define a `FlightSqlService` in the `api` crate that implements the `FlightService` trait.
         * [ ] Implement the Flight SQL endpoints (`get_flight_info`, `do_get`, etc.) in the `igloo-coordinator`.
         * [ ] Update the `igloo-client` to use an Arrow Flight SQL client.
         * [ ] Develop new Python bindings that use the `arrow-flight-sql-client` library.

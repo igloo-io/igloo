@@ -8,11 +8,17 @@ Thank you for your interest in contributing! This guide will help you get starte
    ```bash
    ./scripts/setup.sh
    ```
-   This will install all dependencies, set up pre-commit hooks, and build the project.
+   This will install all dependencies, set up pre-commit hooks, and clean up the environment.
 
-2. **Run all checks locally before pushing:**
+2. **Build the project:**
    ```bash
-   ./scripts/check.sh
+   ./scripts/build.sh
+   ```
+   This builds the Rust workspace (and optionally Python bindings).
+
+2. **Run all the checks locally before pushing all checks locally before pushing:**
+   ```bash
+   ./scripts/validate.sh
    ```
    This runs the same checks as CI (formatting, lint, build, tests).
 
