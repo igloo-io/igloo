@@ -17,7 +17,7 @@ install_rust() {
         sudo apt-get remove -y rustc cargo || true
     fi
 
-    REQUIRED_RUST_VERSION="1.82.0"
+    REQUIRED_RUST_VERSION="1.87.0"
     # Always use rustup to manage the toolchain for consistency
     echo "Installing Rust $REQUIRED_RUST_VERSION via rustup..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION --no-modify-path
@@ -66,8 +66,8 @@ setup_python_env() {
         echo "Using Python interpreter: $PYTHON3_BIN"
         if ! command -v uv &> /dev/null; then
             echo "Installing uv (Python package manager)..."
-            # Use a more direct installation method for uv
-            cargo install uv
+            # Reverted to the correct official installation method for uv
+            curl -LsSf https://astral.sh/uv/install.sh | sh
         else
             echo "uv is already installed."
         fi
@@ -110,6 +110,7 @@ install_rust
 install_protoc
 
 # Export the correct PATH to be used by all subsequent steps in this script
+# This ensures binaries from rustup (~/.cargo/bin) and pip/uv (~/.local/bin) are found
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 
 # Now install Python/pre-commit dependencies which rely on the new PATH
@@ -119,7 +120,7 @@ install_precommit
 # --- Run project commands ---
 
 echo "===== Building Rust workspace ====="
-# Add the -Z flag as a fallback, though the updated rust version should handle it
+# The -Z flag is a fallback; the updated rust version should handle the lockfile
 cargo -Z next-lockfile-bump build --workspace --all-targets
 
 echo "===== Running pre-commit checks ====="
