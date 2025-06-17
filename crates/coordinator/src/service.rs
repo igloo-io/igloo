@@ -1,51 +1,103 @@
-use chrono::Utc;
-use igloo_api::igloo::{
-    coordinator_service_server::CoordinatorService, HeartbeatInfo, HeartbeatResponse,
-    RegistrationAck, WorkerInfo,
+use arrow_flight::{
+    flight_service_server::FlightService, Action, ActionType, Criteria, Empty, FlightData,
+    FlightDescriptor, FlightInfo, GetFlightInfoRequest, HandshakeRequest, HandshakeResponse,
+    PutResult, SchemaResult, Ticket,
 };
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tonic::{Request, Response, Status};
+use futures::Stream;
+use igloo_api::IglooFlightSqlService;
+use std::pin::Pin;
+use tonic::{Request, Response, Status, Streaming};
 
-#[derive(Debug, Clone)]
-pub struct WorkerState {
-    pub last_seen: i64,
+pub struct CoordinatorFlightSqlService {
+    inner: IglooFlightSqlService,
 }
 
-pub type ClusterState = Arc<Mutex<HashMap<String, WorkerState>>>;
-
-pub struct MyCoordinatorService {
-    pub cluster: ClusterState,
+impl CoordinatorFlightSqlService {
+    pub fn new(inner: IglooFlightSqlService) -> Self {
+        Self { inner }
+    }
 }
 
 #[tonic::async_trait]
-impl CoordinatorService for MyCoordinatorService {
-    async fn register_worker(
+impl FlightService for CoordinatorFlightSqlService {
+    type HandshakeStream = Pin<Box<dyn Stream<Item = Result<HandshakeResponse, Status>> + Send + Sync + 'static>>;
+    type ListFlightsStream = Pin<Box<dyn Stream<Item = Result<FlightInfo, Status>> + Send + Sync + 'static>>;
+    type GetFlightInfoStream = Pin<Box<dyn Stream<Item = Result<FlightInfo, Status>> + Send + Sync + 'static>>;
+    type DoGetStream = Pin<Box<dyn Stream<Item = Result<FlightData, Status>> + Send + Sync + 'static>>;
+    type DoPutStream = Pin<Box<dyn Stream<Item = Result<PutResult, Status>> + Send + Sync + 'static>>;
+    type DoActionStream = Pin<Box<dyn Stream<Item = Result<arrow_flight::Result, Status>> + Send + Sync + 'static>>;
+    type ListActionsStream = Pin<Box<dyn Stream<Item = Result<ActionType, Status>> + Send + Sync + 'static>>;
+    type DoExchangeStream = Pin<Box<dyn Stream<Item = Result<FlightData, Status>> + Send + Sync + 'static>>;
+
+    async fn handshake(
         &self,
-        request: Request<WorkerInfo>,
-    ) -> Result<Response<RegistrationAck>, Status> {
-        // TODO: Authentication/authorization stub
-        // e.g., check request.metadata() for auth token
-        // TODO: Add TLS support for gRPC in main.rs
-        let info = request.into_inner();
-        let mut cluster = self.cluster.lock().await;
-        cluster.insert(info.id.clone(), WorkerState { last_seen: Utc::now().timestamp() });
-        println!("Registered worker: {} at {}", info.id, info.address);
-        Ok(Response::new(RegistrationAck { message: "Registered".to_string() }))
+        request: Request<Streaming<HandshakeRequest>>,
+    ) -> Result<Response<Self::HandshakeStream>, Status> {
+        println!("CoordinatorFlightSqlService: handshake called");
+        self.inner.handshake(request).await
     }
-    async fn send_heartbeat(
+
+    async fn list_flights(
         &self,
-        request: Request<HeartbeatInfo>,
-    ) -> Result<Response<HeartbeatResponse>, Status> {
-        let hb = request.into_inner();
-        let mut cluster = self.cluster.lock().await;
-        if let Some(worker) = cluster.get_mut(&hb.worker_id) {
-            worker.last_seen = Utc::now().timestamp();
-            println!("Heartbeat from worker: {}", hb.worker_id);
-            Ok(Response::new(HeartbeatResponse { ok: true }))
-        } else {
-            Ok(Response::new(HeartbeatResponse { ok: false }))
-        }
+        request: Request<Criteria>,
+    ) -> Result<Response<Self::ListFlightsStream>, Status> {
+        println!("CoordinatorFlightSqlService: list_flights called");
+        self.inner.list_flights(request).await
+    }
+
+    async fn get_flight_info(
+        &self,
+        request: Request<GetFlightInfoRequest>,
+    ) -> Result<Response<Self::GetFlightInfoStream>, Status> {
+        println!("CoordinatorFlightSqlService: get_flight_info stream called");
+        self.inner.get_flight_info(request).await
+    }
+
+    async fn get_schema(
+        &self,
+        request: Request<FlightDescriptor>,
+    ) -> Result<Response<SchemaResult>, Status> {
+        println!("CoordinatorFlightSqlService: get_schema called");
+        self.inner.get_schema(request).await
+    }
+
+    async fn do_get(
+        &self,
+        request: Request<Ticket>,
+    ) -> Result<Response<Self::DoGetStream>, Status> {
+        println!("CoordinatorFlightSqlService: do_get called");
+        self.inner.do_get(request).await
+    }
+
+    async fn do_put(
+        &self,
+        request: Request<Streaming<FlightData>>,
+    ) -> Result<Response<Self::DoPutStream>, Status> {
+        println!("CoordinatorFlightSqlService: do_put called");
+        self.inner.do_put(request).await
+    }
+
+    async fn do_action(
+        &self,
+        request: Request<Action>,
+    ) -> Result<Response<Self::DoActionStream>, Status> {
+        println!("CoordinatorFlightSqlService: do_action called");
+        self.inner.do_action(request).await
+    }
+
+    async fn list_actions(
+        &self,
+        request: Request<Empty>,
+    ) -> Result<Response<Self::ListActionsStream>, Status> {
+        println!("CoordinatorFlightSqlService: list_actions called");
+        self.inner.list_actions(request).await
+    }
+
+    async fn do_exchange(
+        &self,
+        request: Request<Streaming<FlightData>>,
+    ) -> Result<Response<Self::DoExchangeStream>, Status> {
+        println!("CoordinatorFlightSqlService: do_exchange called");
+        self.inner.do_exchange(request).await
     }
 }

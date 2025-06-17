@@ -3,7 +3,16 @@ name = "igloo-coordinator"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "igloo_coordinator" # Library name used for imports
+path = "src/lib.rs"
+
+[[bin]]
+name = "igloo-coordinator-bin" # Binary executable name
+path = "src/main.rs"
+
 [dependencies]
+futures = "0.3"
 igloo-api = { path = "../api" }
 igloo-common = { path = "../common" }
 igloo-engine = { path = "../engine" }
