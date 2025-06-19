@@ -8,3 +8,9 @@ name = "pyigloo"
 crate-type = ["cdylib"]
 
 [dependencies]
+pyo3 = { version = "0.20.0", features = ["extension-module"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+arrow-flight = "0.8.0" # Using example version
+tonic = "0.9.0" # Using example version
+futures = "0.3"
+pyo3-arrow = "0.1.0" # Using example version
