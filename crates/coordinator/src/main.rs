@@ -6,29 +6,29 @@ use datafusion::datasource::listing::{
 };
 use igloo_engine::QueryEngine;
 use std::path::Path;
-use std::sync::Arc; // For path operations
+use std::sync::Arc;
 
 mod service;
 
 use arrow_flight::flight_service_server::FlightServiceServer;
 use igloo_api::IglooFlightSqlService;
+use igloo_common::catalog::MemoryCatalog;
 use std::net::SocketAddr;
 use tonic::transport::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Instantiate the query engine
-    let engine = QueryEngine::new();
+    // 1. Instantiate the query engine and catalog
+    let engine = Arc::new(QueryEngine::new());
+    let mut catalog = MemoryCatalog::default();
 
-    // 2. Register the CSV as a table
-    let csv_relative_path = "../connectors/filesystem/test_data.csv";
+    // 2. Register the CSV as a table in the catalog
+    let csv_relative_path = "crates/connectors/filesystem/test_data.csv";
     let base_path = std::env::current_dir()?; // Assuming run from workspace root
     let csv_abs_path = base_path.join(Path::new(csv_relative_path));
 
     let table_path_url_str = format!("file://{}", csv_abs_path.display());
     let table_path = ListingTableUrl::parse(&table_path_url_str)?;
-
-    println!("Attempting to register test_table with path: {}", csv_abs_path.display());
 
     let config = ListingTableConfig::new(table_path)
         .with_schema(Arc::new(Schema::new(vec![
@@ -41,15 +41,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
 
     let table_provider = Arc::new(ListingTable::try_new(config)?);
-    engine.register_table("test_table", table_provider)?;
-    println!("Registered test_table successfully.");
+    catalog.register_table("test_table".to_string(), table_provider);
+    println!("Registered test_table with the catalog.");
 
-    // 3. Execute a simple query
+    // 3. Register tables from catalog with the engine
+    for (name, table) in catalog.tables.iter() {
+        engine.register_table(name, table.clone())?;
+        println!("Registered table '{}' with the query engine.", name);
+    }
+
+    // 4. Execute a simple query
     let sql = "SELECT col_a, col_b FROM test_table LIMIT 5;";
     println!("Executing SQL: {}", sql);
     let results = engine.execute(sql).await;
 
-    // 4. Print results
+    // 5. Print results
     println!("Query Results:");
     match print_batches(&results) {
         Ok(_) => {} // Already prints to stdout
@@ -59,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Keep the existing Flight SQL server setup
     let addr: SocketAddr = "127.0.0.1:50051".parse()?;
-    let flight_service = IglooFlightSqlService::new(engine.clone()); // engine is cloned
+    let flight_service = IglooFlightSqlService::new(engine.clone(), Arc::new(catalog));
     println!("Coordinator Flight SQL listening on {}", addr);
 
     Server::builder()

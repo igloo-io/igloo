@@ -1901,6 +1901,7 @@ dependencies = [
  "arrow-flight",
  "datafusion",
  "futures",
+ "igloo-common",
  "igloo-engine",
  "prost",
  "prost-types",
@@ -1949,6 +1950,7 @@ dependencies = [
 name = "igloo-common"
 version = "0.1.0"
 dependencies = [
+ "datafusion",
  "prost",
  "prost-types",
  "sqlparser 0.56.0",
