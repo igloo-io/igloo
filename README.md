@@ -1,82 +1,294 @@
 # 🍙 Igloo: The Distributed SQL Query Engine
 
-Igloo is a high-performance, distributed SQL query engine built in Rust. It is designed from the ground up to query data from a multitude of sources, including operational databases, data lakes, and streaming systems. Igloo provides a single, unified SQL interface to your entire data ecosystem.
+Igloo is a high-performance, distributed SQL query engine built in Rust that makes data access simple, fast, and intelligent. Query data from multiple sources—operational databases, data lakes, and streaming systems—through a single, unified SQL interface.
 
-Our mission is to make data access simple, fast, and intelligent. By leveraging a state-of-the-art query engine and a modern data transport protocol, Igloo dramatically accelerates data science and analytics workloads.
-
-## Core Features
-- **Federated Queries**: Connect to multiple, disparate data sources (like PostgreSQL, MySQL, and data lake files) and query them together in a single SQL statement.
-- **Powered by Apache Arrow DataFusion**: Igloo is built on the lightning-fast, extensible, and Rust-native Apache Arrow DataFusion query engine. This provides a rich set of optimizations and a powerful foundation for analytics.
-- **High-Speed Data Transport with Apache Arrow Flight SQL**: Igloo uses Apache Arrow Flight SQL for client-server communication, a modern protocol that is significantly faster than traditional methods like ODBC and JDBC.
-- **Intelligent Caching**: Igloo features a transparent caching layer. Frequently accessed data is automatically cached and kept up-to-date, providing orders-of-magnitude speedups for repeated queries.
-- **Elastic & Scalable**: Igloo is designed to run on a cluster of machines, distributing query processing seamlessly across all available resources. It can scale from a single laptop to thousands of nodes.
-- **Modern & Safe**: Written in Rust, Igloo guarantees memory safety and concurrency, eliminating common bugs found in distributed systems and ensuring high reliability.
-- **Extensible by Design**: The "Connector" architecture makes it trivial to add support for new data sources.
+---
 
 ## 🚀 Quickstart
-### Setup Your Environment:
-Run the setup script to install all necessary dependencies and tools.
 
-```bash
-./scripts/setup.sh
+1. **Install Prerequisites:**
+   * [Rust (latest stable)](https://www.rust-lang.org/tools/install)
+   * [Protocol Buffers Compiler (`protoc`)](https://grpc.io/docs/protoc-installation/)
+   * (Optional) [Python 3.x](https://www.python.org/downloads/) for Python bindings
+
+2. **Clone and Build:**
+   ```bash
+   git clone https://github.com/igloo-io/igloo
+   cd igloo
+   cargo build --release
+   ```
+
+3. **Quick Start with Docker:**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+4. **Run Tests:**
+   ```bash
+   cargo test
+   ```
+
+---
+
+## ✨ Core Features
+
+* **🔗 Federated Queries**: Connect multiple data sources (PostgreSQL, MySQL, data lakes) and query them together in a single SQL statement
+* **⚡ Powered by Apache Arrow DataFusion**: Lightning-fast, extensible Rust-native query engine with rich optimizations
+* **🚀 High-Speed Transport**: Apache Arrow Flight SQL for client-server communication—significantly faster than ODBC/JDBC
+* **🧠 Intelligent Caching**: Transparent caching layer with automatic cache invalidation via Change Data Capture (CDC)
+* **📈 Elastic & Scalable**: Distributed architecture that scales from a single laptop to thousands of nodes
+* **🛡️ Memory Safe**: Written in Rust for guaranteed memory safety and high reliability
+* **🔌 Extensible**: Modular connector architecture makes adding new data sources trivial
+
+---
+
+## 🏗️ Architecture Overview
+
+Igloo uses a simple yet powerful coordinator-worker architecture:
+
+### 🧠 The Coordinator Node
+The brain of the cluster, responsible for:
+- **Client Connections**: Arrow Flight SQL endpoint for SQL query submission
+- **Query Planning**: Apache Arrow DataFusion-powered SQL parsing, planning, and optimization
+- **Smart Routing**: Decides between live database queries and cached data
+- **Cluster Management**: Real-time worker tracking and intelligent task scheduling
+
+### 👷 Worker Nodes
+The hands of the cluster, each worker:
+- **Registers** with the Coordinator announcing available resources
+- **Executes** assigned query tasks using specialized connectors
+- **Processes** data in-memory with high-performance query engine
+- **Communicates** results between workers and back to the Coordinator
+
+### 🔄 Query Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Coordinator
+    participant Worker1
+    participant Worker2
+    participant Cache/DB
+
+    Client->>Coordinator: SQL Query via Flight SQL
+    Coordinator->>Coordinator: Parse & Plan (DataFusion)
+    Coordinator->>Coordinator: Check Cache Strategy
+    
+    par Distributed Execution
+        Coordinator->>Worker1: Task 1: Scan data partition A
+        Coordinator->>Worker2: Task 2: Scan data partition B
+    end
+    
+    par Data Fetching
+        Worker1->>Cache/DB: Fetch partition A
+        Worker2->>Cache/DB: Fetch partition B
+    end
+    
+    Worker1->>Coordinator: Results A
+    Worker2->>Coordinator: Results B
+    Coordinator->>Coordinator: Combine & Finialize
+    Coordinator->>Client: Final Results
 ```
 
-### Build the Project:
-Build all components using the main build script.
+**Example Query Execution:**
+1. User submits: `SELECT * FROM postgres_orders WHERE region = 'EMEA'`
+2. Coordinator checks catalog—discovers cached, up-to-date data available
+3. DataFusion planner creates optimized physical execution plan
+4. Scheduler distributes scan tasks across available workers
+5. Workers execute in parallel, filtering for 'EMEA' region
+6. Results stream back through Coordinator to client
 
-```bash
-./scripts/build.sh
+---
+
+## 📁 Repository Structure
+
+```
+igloo/
+├── 📡 api/                    # Protocol Buffers definitions
+├── 🦀 crates/                 # Core Rust packages
+│   ├── igloo-coordinator/     # 🧠 Coordinator node logic
+│   ├── igloo-worker/          # 👷 Worker node implementation  
+│   ├── igloo-engine/          # ⚙️ Core query processing (DataFusion)
+│   ├── igloo-cache/           # 💾 Caching layer
+│   └── connectors/            # 🔌 Data source plugins
+├── 🐍 python/                 # Python bindings
+├── 📚 docs/                   # Documentation & design decisions
+└── 💡 examples/               # Sample code & tutorials
 ```
 
-### Run the System:
-#### Start the Coordinator Node:
-```bash
-cargo run --bin igloo-coordinator
-```
-The coordinator will start, register a sample CSV file as `test_table`, and listen for client connections on `127.0.0.1:50051`.
+---
 
-#### Start a Worker Node (in a new terminal):
-```bash
-cargo run --bin igloo-worker
-```
-The worker will start, register itself with the coordinator, and begin sending heartbeats.
+## 🚀 Getting Started
 
-### Run Tests:
-Execute the entire test suite to ensure everything is working correctly.
+### Option 1: Docker Compose (Recommended)
+
+The easiest way to get Igloo running with all dependencies:
 
 ```bash
-cargo test --workspace
+# Start Igloo cluster with PostgreSQL
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f igloo
+
+# Stop services
+docker-compose down
 ```
 
-## Architecture Overview
-Igloo's architecture is simple and robust, consisting of two primary types of nodes: a single Coordinator and multiple Workers.
+### Option 2: Local Development
 
-### The Coordinator Node
-The Coordinator is the brain of the Igloo cluster. It is a single process responsible for:
-- **Accepting Client Connections**: Data scientists and applications connect to the Coordinator via the Arrow Flight SQL endpoint to submit SQL queries.
-- **Query Planning**: It leverages Apache Arrow DataFusion to parse, plan, and optimize the SQL query. This includes deciding whether to query a live database or use a faster, cached data source.
-- **Cluster Management & Scheduling**: The Coordinator maintains a real-time view of all Worker nodes in the cluster. It breaks the query plan into smaller, parallelizable execution tasks and assigns them to the available workers.
+For development and customization:
 
-### The Worker Nodes
-The Workers are the hands of the cluster. Each worker node runs a single igloo-worker process responsible for:
-- **Registering with the Coordinator**: On startup, a worker announces its presence to the Coordinator.
-- **Executing Tasks**: The worker accepts execution tasks from the Coordinator.
-- **Fetching Data**: It uses a specific Connector to fetch the data required for its task—either from an external database or the local filesystem.
-- **Processing Data**: It processes the data in memory using Igloo's high-performance query engine. This can involve filtering, joining, or aggregating data.
-- **Communicating Results**: It can send intermediate results to other workers for further processing or send final results back to the Coordinator.
+1. **Prerequisites:**
+   * Rust toolchain (see `rust-toolchain.toml`)
+   * Protocol Buffers Compiler (`protoc`)
+   * Running PostgreSQL instance
+   * ADBC drivers (see environment configuration below)
 
-## Repository Structure
-This project is a Cargo workspace, making it easy to manage multiple interconnected packages. Here's a guide to the most important directories:
-- **/api**: Contains the .proto definitions for all network communication and the generated Rust code for the FlightService.
-- **/crates**: Contains all the core Rust source code for Igloo.
-  - **igloo-coordinator**: Source code for the Coordinator node. The "brain".
-  - **igloo-worker**: Source code for the Worker nodes. The "hands".
-  - **igloo-engine**: The core, non-distributed query processing logic, powered by DataFusion.
-  - **igloo-cache**: The library for reading from and writing to our cache.
-  - **igloo-common**: Shared types, errors, and catalog functionality used across the workspace.
-  - **connectors/**: A home for all data source plugins, such as the filesystem connector.
-- **/pyigloo**: Python bindings to make it easy to query Igloo from tools like Jupyter and Pandas.
-- **/scripts**: Helper scripts for setup, building, validation, and formatting.
+2. **Configure Environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your database connections and paths
+   ```
 
-## Contributing
-We welcome contributions of all kinds, from bug reports to feature enhancements. Please read our Contributing Guide to get started. The project roadmap is also available in `roadmap.md`.
+3. **Build and Run:**
+   ```bash
+   cargo build --release
+   cargo run
+   ```
+
+---
+
+## ⚙️ Configuration
+
+Igloo is configured via environment variables. Copy `.env.example` to `.env` for local development.
+
+### 🔗 Database Connections
+```bash
+# Primary PostgreSQL connection
+DATABASE_URL=postgres://user:password@localhost:5432/mydb
+
+# Alternative format
+IGLOO_POSTGRES_URI=host=localhost user=postgres password=postgres dbname=mydb
+```
+
+### 📂 Data Paths
+```bash
+# Parquet/Iceberg data location
+IGLOO_PARQUET_PATH=./dummy_iceberg_cdc/
+
+# CDC monitoring path
+IGLOO_CDC_PATH=./dummy_iceberg_cdc/
+```
+
+### 🔧 ADBC Drivers (Local Development)
+```bash
+# Required for local execution (not needed in Docker)
+export LD_LIBRARY_PATH=/path/to/adbc/drivers:$LD_LIBRARY_PATH
+
+# For integration tests
+TEST_ADBC_POSTGRESQL_URI=postgresql://user:password@localhost:5432/test_db
+```
+
+---
+
+## 💻 Example Usage
+
+### Rust API
+```rust
+use igloo::{Coordinator, WorkerConfig};
+use tokio;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Start coordinator
+    let coordinator = Coordinator::new("0.0.0.0:50051").await?;
+    
+    // Execute federated query
+    let results = coordinator.execute_sql(
+        "SELECT o.order_id, c.customer_name 
+         FROM postgres_orders o 
+         JOIN lakehouse_customers c ON o.customer_id = c.id 
+         WHERE o.created_at > '2024-01-01'"
+    ).await?;
+    
+    println!("Query results: {:?}", results);
+    Ok(())
+}
+```
+
+### Python Bindings
+```python
+import igloo
+
+# Connect to Igloo cluster
+client = igloo.connect("grpc://localhost:50051")
+
+# Execute SQL with automatic caching
+df = client.sql("""
+    SELECT region, SUM(revenue) as total_revenue
+    FROM sales_data 
+    WHERE date >= '2024-01-01'
+    GROUP BY region
+    ORDER BY total_revenue DESC
+""")
+
+print(df.to_pandas())
+```
+
+---
+
+## 🎯 Current Features
+
+* ⚡ **Fast SQL Execution** with Apache DataFusion
+* 🍙 **Distributed Processing** across multiple nodes  
+* 🧊 **Smart Result Caching** with query fingerprinting
+* 🔄 **CDC-Driven Cache Invalidation** from Iceberg change logs
+* 🔗 **Cross-Source Joins** between PostgreSQL and Arrow datasets
+* 🛡️ **Memory Safety** guaranteed by Rust
+* 📊 **Arrow Flight SQL** for high-performance client communication
+
+---
+
+## 🛤️ Roadmap
+
+### Near Term
+- [ ] 🌐 **REST API** for easier client integration
+- [ ] ⏱️ **Async CDC Updates** with live cache refresh  
+- [ ] 📊 **Query Metrics** (Prometheus, OpenTelemetry)
+- [ ] 🔧 **Enhanced Connector Framework**
+
+### Future Vision  
+- [ ] 🧠 **ML-Powered Query Optimization**
+- [ ] 🌍 **Multi-Region Deployments**
+- [ ] 📦 **Persistent Cache Backends** (RocksDB, Redis)
+- [ ] 🔐 **Advanced Security & Auth**
+- [ ] 📈 **Auto-scaling** based on query patterns
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Whether you're fixing bugs, adding features, or improving documentation:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and add tests
+4. Run the test suite: `cargo test`
+5. Submit a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🍙 About Igloo
+
+Igloo makes data access simple by bridging the gap between operational databases and analytical workloads. Built by developers who understand the pain of slow, complex data pipelines, Igloo provides the performance and simplicity your team needs to focus on insights, not infrastructure.
+
+**Star ⭐ this repository if Igloo helps power your data journey!**
