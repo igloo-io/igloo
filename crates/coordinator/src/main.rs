@@ -11,10 +11,11 @@ use std::sync::Arc; // For path operations
 mod service;
 
 use arrow_flight::flight_service_server::FlightServiceServer;
-use igloo_api::IglooFlightSqlService;
+use crate::flight::BasicFlightServiceImpl; // Added
 use std::net::SocketAddr;
 use tonic::transport::Server;
 
+mod flight;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Instantiate the query engine
@@ -59,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Keep the existing Flight SQL server setup
     let addr: SocketAddr = "127.0.0.1:50051".parse()?;
-    let flight_service = IglooFlightSqlService::new(engine.clone()); // engine is cloned
+    let flight_service = BasicFlightServiceImpl::new(); // Changed
     println!("Coordinator Flight SQL listening on {}", addr);
 
     Server::builder()
