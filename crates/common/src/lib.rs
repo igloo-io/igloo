@@ -9,5 +9,6 @@
 //! ```
 // TODO: Shared utilities, types, and error handling
 
+pub mod catalog;
 pub mod error;
 pub use error::Error;

@@ -23,6 +23,7 @@ use arrow_flight::{
 };
 use datafusion::arrow::ipc::writer::IpcWriteOptions;
 use futures::Stream;
+use igloo_common::catalog::MemoryCatalog;
 use igloo_engine::QueryEngine;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -30,11 +31,13 @@ use tonic::{Request, Response, Status, Streaming};
 
 pub struct IglooFlightSqlService {
     engine: Arc<QueryEngine>,
+    #[allow(dead_code)]
+    catalog: Arc<MemoryCatalog>,
 }
 
 impl IglooFlightSqlService {
-    pub fn new(engine: QueryEngine) -> Self {
-        Self { engine: Arc::new(engine) }
+    pub fn new(engine: Arc<QueryEngine>, catalog: Arc<MemoryCatalog>) -> Self {
+        Self { engine, catalog }
     }
 }
 
