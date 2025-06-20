@@ -16,18 +16,29 @@ if [[ "$INSTALLED_RUST_VERSION" != "$REQUIRED_RUST_VERSION" ]]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         echo "Installing Rust $REQUIRED_RUST_VERSION via rustup..."
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION --no-modify-path
-        source "$HOME/.cargo/env"
+        source "$HOME/.cargo/env" # Source for current session
         echo "Successfully installed Rust. Active version: $(rustc --version | awk '{print $2}')"
         echo "Installing clippy and rustfmt components..."
         rustup component add clippy rustfmt
-    else
-        echo "Removing system-installed Rust to prevent conflicts..."
-        sudo apt-get remove -y rustc cargo || true
+    else # Linux
+        echo "Installing Rust $REQUIRED_RUST_VERSION via rustup for Linux..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $REQUIRED_RUST_VERSION --no-modify-path
+        # Ensure .cargo/bin is in PATH for future sessions by adding to .bashrc if not already present
+        if ! grep -q 'source "$HOME/.cargo/env"' ~/.bashrc; then
+            echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc # More direct way to add to PATH
+        fi
+        source "$HOME/.cargo/env" # Source for current session
+        echo "Successfully installed Rust. Active version: $(rustc --version | awk '{print $2}')"
+        echo "Installing clippy and rustfmt components..."
+        rustup component add clippy rustfmt
+        echo "Installing other dependencies via apt-get..."
         sudo apt-get update
         sudo apt-get install -y curl python3-pip build-essential pkg-config libssl-dev protobuf-compiler
     fi
 else
     echo "Rust $REQUIRED_RUST_VERSION already installed. Skipping."
+    # Even if already installed, ensure cargo env is sourced for the current session
+    source "$HOME/.cargo/env"
 fi
 
 # 3. Install protoc (already handled above for Ubuntu)
