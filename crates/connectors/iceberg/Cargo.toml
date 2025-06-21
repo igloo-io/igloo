@@ -1,0 +1,31 @@
+[package]
+name = "igloo-iceberg-connector"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Datafusion dependencies
+datafusion = { workspace = true }
+arrow = { workspace = true } # Implicitly used by datafusion, good to have explicit for clarity
+
+# Iceberg-rust dependency
+# We'll start with core iceberg-rust and add features as needed.
+# For local file metadata, `rust-catalog` might be relevant if using iceberg-rust's catalog system.
+# However, initially, we might parse metadata files directly.
+iceberg-rust = { version = "0.3.0" } # Specify a version, 0.3.0 is recent as of late 2023/early 2024
+
+# Async runtime and utilities
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# For handling URLs and file paths
+url = { workspace = true }
+object_store = { workspace = true } # DataFusion uses this, might be useful for Iceberg file access
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+# Add any development-specific dependencies if known now, e.g., for testing
