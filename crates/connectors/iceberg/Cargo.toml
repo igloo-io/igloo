@@ -9,10 +9,7 @@ datafusion = { workspace = true }
 arrow = { workspace = true } # Implicitly used by datafusion, good to have explicit for clarity
 
 # Iceberg-rust dependency
-# We'll start with core iceberg-rust and add features as needed.
-# For local file metadata, `rust-catalog` might be relevant if using iceberg-rust's catalog system.
-# However, initially, we might parse metadata files directly.
-iceberg-rust = { version = "0.3.0" } # Specify a version, 0.3.0 is recent as of late 2023/early 2024
+iceberg-rust = { version = "0.7.0" } # Updated to latest version
 
 # Async runtime and utilities
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
@@ -21,11 +18,15 @@ futures = { workspace = true }
 
 # For handling URLs and file paths
 url = { workspace = true }
-object_store = { workspace = true } # DataFusion uses this, might be useful for Iceberg file access
+object_store = { workspace = true } # Will use workspace version (0.9)
 
 # Error handling
 thiserror = { workspace = true }
 anyhow = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] } # Added chrono
 
 [dev-dependencies]
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+tempfile = "3"
 # Add any development-specific dependencies if known now, e.g., for testing

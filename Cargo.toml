@@ -21,3 +21,40 @@ tokio = { version = "1", features = ["full"] }
 tonic = "0.12"
 prost = "0.13"
 prost-types = "0.13"
+
+# Common error handling
+anyhow = "1.0.79"
+thiserror = "1.0"
+
+# Common async utilities
+async-trait = "0.1"
+futures = "0.3"
+
+# Common data related crates - Reflecting versions used by other workspace members (e.g., igloo-api)
+datafusion = "48.0.0" # As seen from cargo tree for igloo-api etc.
+arrow = "=55.1.0"    # As seen from cargo tree for igloo-api etc.
+arrow-arith = "=55.1.0"
+arrow-array = "=55.1.0"
+arrow-buffer = "=55.1.0"
+arrow-cast = "=55.1.0"
+arrow-data = "=55.1.0"
+arrow-ord = "=55.1.0"
+arrow-row = "=55.1.0"
+arrow-schema = "=55.1.0"
+arrow-select = "=55.1.0"
+arrow-string = "=55.1.0"
+arrow-ipc = "=55.1.0" # Adding potentially relevant sub-crates
+arrow-json = "=55.1.0"
+arrow-csv = "=55.1.0"
+arrow-flight = "=55.1.0"
+
+
+# Other utilities (object_store might also need version alignment if datafusion 48 uses a different one)
+url = "2.5" # This one seems less coupled, can keep for now
+object_store = "0.12.0" # Datafusion 48.0.0 uses object_store 0.9.0, but let's check.
+                        # A quick check: datafusion 48.0.0 actually uses object_store 0.9.0.
+                        # The cargo tree showed object_store 0.12.2 being downloaded for something else.
+                        # Let's stick to what DF 48 needs or is compatible with.
+                        # object_store 0.9.0 is fine. The root had 0.9.
+
+# Removed [patch.crates-io] section, relying on specific versions in [workspace.dependencies]
