@@ -1,0 +1,71 @@
+{
+  "format-version": "1",
+  "table-uuid": "f7c3f5a5-3f28-4c22-94e8-0a8f2ad680f8",
+  "location": "file:///app/crates/connectors/iceberg/test_data/iceberg_table",
+  "last-updated-ms": 1678886400000,
+  "last-column-id": 2,
+  "schema": {
+    "type": "struct",
+    "schema-id": 0,
+    "identifier-field-ids": [1],
+    "fields": [
+      {
+        "id": 1,
+        "name": "id",
+        "required": true,
+        "type": "long"
+      },
+      {
+        "id": 2,
+        "name": "data_b",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "schemas": [
+    {
+      "type": "struct",
+      "schema-id": 0,
+      "identifier-field-ids": [1],
+      "fields": [
+        {
+          "id": 1,
+          "name": "id",
+          "required": true,
+          "type": "long"
+        },
+        {
+          "id": 2,
+          "name": "data_b",
+          "required": false,
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "current-schema-id": 0,
+  "partition-spec": [],
+  "default-spec-id": 0,
+  "partition-specs": [
+    {
+      "spec-id": 0,
+      "fields": []
+    }
+  ],
+  "default-sort-order-id": 0,
+  "sort-orders": [
+    {
+      "order-id": 0,
+      "fields": []
+    }
+  ],
+  "properties": {
+    "owner": "test_user",
+    "comment": "Manually created test Iceberg table_b"
+  },
+  "current-snapshot-id": -1,
+  "snapshots": [],
+  "snapshot-log": [],
+  "metadata-log": []
+}

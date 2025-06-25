@@ -1,0 +1,32 @@
+[package]
+name = "igloo-iceberg-connector"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Datafusion dependencies
+datafusion = { workspace = true }
+arrow = { workspace = true } # Implicitly used by datafusion, good to have explicit for clarity
+
+# Iceberg-rust dependency
+iceberg-rust = { version = "0.7.0" } # Updated to latest version
+
+# Async runtime and utilities
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# For handling URLs and file paths
+url = { workspace = true }
+object_store = { workspace = true } # Will use workspace version (0.9)
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] } # Added chrono
+
+[dev-dependencies]
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+tempfile = "3"
+# Add any development-specific dependencies if known now, e.g., for testing

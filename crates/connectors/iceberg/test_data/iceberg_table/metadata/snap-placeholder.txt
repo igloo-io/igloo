@@ -1,0 +1,9 @@
+This is a placeholder for a real Avro-encoded Iceberg manifest file.
+A valid manifest file (e.g., snap-xxxxxxxx-m00000.avro) needs to be generated that points to:
+../data/table_b_data_001.parquet
+The manifest file should contain information about the data file, including its path, format (Parquet),
+partition data (none for this unpartitioned table), record count, file size, and column-level stats if available.
+This placeholder is used because programmatic generation of a valid manifest file with pyiceberg==0.9.1
+proved too difficult due to library import and API issues.
+The Iceberg reader implementation should initially focus on parsing schema information from vX.metadata.json
+and might not support full table scans until a valid manifest is provided.
