@@ -19,5 +19,10 @@ prost-types = "0.13"
 chrono = "0.4"
 datafusion = "48.0.0"
 igloo-connector-filesystem = { path = "../connectors/filesystem" }
+igloo-connector-iceberg = { path = "../connectors/iceberg" }
 object_store = "0.9"
 arrow-flight = "55.1.0"
+arrow = "55.1.0"
+futures = "0.3"
+tokio-stream = "0.1"
+uuid = { version = "1", features = ["v4"] }

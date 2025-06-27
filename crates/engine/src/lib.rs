@@ -1,14 +1,15 @@
 //! Engine crate
 //!
 //! Implements the core query engine for Igloo.
-//!
-//! # Example
-//! ```rust
-//! // Example usage will go here once implemented
-//! ```
-//!
-//! # TODO
-//! Implement query engine logic
+
+pub mod physical_plan;
+pub mod physical_planner;
+pub mod operators;
+pub mod parser;
+
+// Re-export key types
+pub use physical_plan::{ExecutionPlan, PhysicalPlan};
+pub use physical_planner::PhysicalPlanner;
 
 // std
 use std::sync::Arc;
@@ -53,6 +54,10 @@ impl QueryEngine {
     pub async fn execute(&self, sql: &str) -> Vec<RecordBatch> {
         let df = self.ctx.sql(sql).await.expect("SQL execution failed");
         df.collect().await.expect("Failed to collect results")
+    }
+
+    pub fn session_context(&self) -> &SessionContext {
+        &self.ctx
     }
 }
 

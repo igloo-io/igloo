@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package igloo.distributed;
+
+import "google/protobuf/empty.proto";
+option java_multiple_files = true;
+option go_package = "github.com/igloo/igloo/api/proto;igloo";
+option csharp_namespace = "Igloo.Api.Proto";
+
+// Distributed query execution service
+service DistributedQueryService {
+  rpc ExecuteQuery(QueryRequest) returns (stream QueryResponse);
+  rpc ExecuteFragment(FragmentRequest) returns (stream RecordBatchMessage);
+}
+
+// Query request message
+message QueryRequest {
+  string sql = 1;
+  map<string, string> session_config = 2;
+}
+
+// Query response message
+message QueryResponse {
+  oneof response {
+    QueryPlan plan = 1;
+    RecordBatchMessage batch = 2;
+    QueryError error = 3;
+    QueryComplete complete = 4;
+  }
+}
+
+// Query plan message
+message QueryPlan {
+  string plan_json = 1;
+  repeated FragmentInfo fragments = 2;
+}
+
+// Fragment information
+message FragmentInfo {
+  string fragment_id = 1;
+  string worker_address = 2;
+  bytes serialized_plan = 3;
+}
+
+// Fragment execution request
+message FragmentRequest {
+  string fragment_id = 1;
+  bytes serialized_plan = 2;
+  map<string, string> session_config = 3;
+}
+
+// Record batch message for streaming results
+message RecordBatchMessage {
+  bytes schema = 1;
+  bytes batch_data = 2;
+  int64 num_rows = 3;
+}
+
+// Query error message
+message QueryError {
+  string error_type = 1;
+  string message = 2;
+  string details = 3;
+}
+
+// Query completion message
+message QueryComplete {
+  int64 total_rows = 1;
+  int64 execution_time_ms = 2;
+}
