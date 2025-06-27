@@ -2,8 +2,14 @@
 name = "igloo-engine"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igloo Team <team@example-igloo.com>"]
+description = "Query engine core for the Igloo Query Engine."
+license = "Apache-2.0"
+repository = "https://github.com/igloo-io/igloo"
+publish = false # Cannot be published due to local path dependencies (datafusion_engine)
 
 [dependencies]
+# datafusion_engine = { path = "../igloo/engine/datafusion_engine" } # This is the problematic local path
 igloo-common = { path = "../common" }
 tokio = { workspace = true }
 tonic = { workspace = true }

@@ -2,6 +2,11 @@
 name = "igloo-connector-postgres"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igloo Team <team@example-igloo.com>"]
+description = "PostgreSQL connector for the Igloo Query Engine."
+license = "Apache-2.0"
+repository = "https://github.com/igloo-io/igloo"
+publish = true
 
 [dependencies]
 igloo-common = { path = "../../common" }
