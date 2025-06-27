@@ -2,6 +2,11 @@
 name = "igloo-worker"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igloo Team <team@example-igloo.com>"]
+description = "Worker component for the Igloo Query Engine."
+license = "Apache-2.0"
+repository = "https://github.com/igloo-project/igloo-query-engine"
+publish = true
 
 [dependencies]
 igloo-api = { path = "../api" }

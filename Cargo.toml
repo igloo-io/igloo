@@ -11,6 +11,7 @@ members = [
     "crates/connectors/postgres",
     "crates/connectors/mysql",
     "crates/connectors/filesystem",
+    "crates/igloo", # Added the new main igloo crate
     "pyigloo"
 ]
 resolver = "2"

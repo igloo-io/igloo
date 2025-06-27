@@ -1,0 +1,30 @@
+[package]
+name = "igloo"
+version = "0.1.0"
+authors = ["Igloo Team <team@example-igloo.com>"]
+description = "Main Igloo crate, unifying all Igloo components and providing the main binary."
+license = "Apache-2.0"
+repository = "https://github.com/igloo-project/igloo-query-engine"
+edition = "2021"
+publish = true
+
+[dependencies]
+igloo-common = { path = "../common", version = "0.1.0" } # Assuming version, adjust as needed
+igloo-api = { path = "../api", version = "0.1.0" }
+igloo-engine = { path = "../engine", version = "0.1.0" }
+igloo-cache = { path = "../cache", version = "0.1.0" }
+igloo-cdc = { path = "../cdc", version = "0.1.0" }
+igloo-connector-filesystem = { path = "../connectors/filesystem", version = "0.1.0" }
+igloo-connector-postgres = { path = "../connectors/postgres", version = "0.1.0" }
+igloo-connector-mysql = { path = "../connectors/mysql", version = "0.1.0" }
+igloo-coordinator = { path = "../coordinator", version = "0.1.0" }
+igloo-worker = { path = "../worker", version = "0.1.0" }
+igloo-client = { path = "../client", version = "0.1.0" }
+
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4.0", features = ["derive"] }
+# Add other necessary dependencies
+
+[[bin]]
+name = "igloo"
+path = "src/main.rs"

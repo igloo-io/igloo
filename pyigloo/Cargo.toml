@@ -2,9 +2,18 @@
 name = "pyigloo"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igloo Team <team@example-igloo.com>"]
+description = "Python bindings for the Igloo Query Engine."
+license = "Apache-2.0"
+repository = "https://github.com/igloo-project/igloo-query-engine"
+publish = true # This field is for cargo, maturin handles PyPI publishing
 
 [lib]
 name = "pyigloo"
 crate-type = ["cdylib"]
 
 [dependencies]
+# Add PyO3 and other necessary dependencies for Python bindings here
+# For example:
+# pyo3 = { version = "0.21.0", features = ["extension-module"] }
+# igloo-client = { path = "../crates/client", version = "0.1.0" } # If Python bindings wrap the client
