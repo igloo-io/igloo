@@ -13,10 +13,22 @@ pub struct WorkerState {
     pub last_seen: i64,
 }
 
+use crate::catalog::Catalog;
+
 pub type ClusterState = Arc<Mutex<HashMap<String, WorkerState>>>;
 
 pub struct MyCoordinatorService {
     pub cluster: ClusterState,
+    pub catalog: Arc<Catalog>,
+}
+
+impl MyCoordinatorService {
+    pub fn new() -> Self {
+        Self {
+            cluster: Arc::new(Mutex::new(HashMap::new())),
+            catalog: Arc::new(Catalog::new()),
+        }
+    }
 }
 
 #[tonic::async_trait]
