@@ -13,7 +13,7 @@ members = [
     "crates/connectors/filesystem",
     "crates/igloo", # Added the new main igloo crate
     "pyigloo"
-]
+, "crates/sql"]
 resolver = "2"
 
 [workspace.dependencies]
