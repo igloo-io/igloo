@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Igloo Team <team@example-igloo.com>"]
 description = "Main Igloo crate, unifying all Igloo components and providing the main binary."
 license = "Apache-2.0"
-repository = "https://github.com/igloo-project/igloo-query-engine"
+repository = "https://github.com/igloo-io/igloo"
 edition = "2021"
 publish = true
 

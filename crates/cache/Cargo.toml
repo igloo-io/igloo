@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Igloo Team <team@example-igloo.com>"]
 description = "Caching layer for the Igloo Query Engine."
 license = "Apache-2.0"
-repository = "https://github.com/igloo-project/igloo-query-engine"
+repository = "https://github.com/igloo-io/igloo"
 publish = true
 
 [dependencies]
