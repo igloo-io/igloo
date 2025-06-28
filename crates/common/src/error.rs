@@ -7,8 +7,12 @@ use sqlparser::parser::ParserError;
 pub enum Error {
     #[error("An unknown error occurred: {0}")]
     Unknown(String),
-    // Add more error variants as needed
     #[error("SQL parsing error: {0}")]
+    Parse(String), // Changed from SqlParser(#[from] ParserError) to match usage
+    #[error("Planning error: {0}")]
+    Plan(String),
+    // Add more error variants as needed
+    #[error("SQL parser error: {0}")] // Kept a separate variant for direct sqlparser errors if needed elsewhere
     SqlParser(#[from] ParserError),
 }
 

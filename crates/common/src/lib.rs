@@ -11,4 +11,6 @@
 
 pub mod catalog;
 pub mod error;
+
+pub use catalog::{Schema, SchemaRef}; // Added Schema and SchemaRef
 pub use error::Error;
