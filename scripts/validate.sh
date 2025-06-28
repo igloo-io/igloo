@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -eux
 
+# Ensure Rust toolchain is in PATH
+export PATH="$HOME/.cargo/bin:$PATH"
+
 # Fast check before build
 echo "Running cargo fmt check..."
 cargo fmt --all -- --check
