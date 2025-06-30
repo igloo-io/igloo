@@ -25,4 +25,6 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && rm -rf /var/lib/apt/lists/*
 
 USER $USERNAME
+# Ensure git and other system binaries are in PATH for the vscode user
+ENV PATH="/usr/bin:${PATH}"
 WORKDIR /workspace

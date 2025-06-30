@@ -117,27 +117,46 @@ jobs:
         id: get_version
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      # This step will be expanded to create the igloo crate files
+      - name: Prepare clean release version string
+        id: prep_version
+        run: |
+          VERSION=${{ env.RELEASE_VERSION }}
+          if [[ "${VERSION}" == v* ]]; then
+            VERSION="${VERSION#v}"
+          fi
+          echo "RELEASE_VERSION_NO_V=$VERSION" >> $GITHUB_ENV
+          echo "Prepared version string: $VERSION"
+
       - name: Update crate versions
         run: |
-          echo "Updating crate versions to ${{ env.RELEASE_VERSION }}"
-          # This is a complex step. Ideally, a script or tool like `cargo-workspaces` or `cargo-release`
-          # would handle version bumps across the workspace and update dependencies.
-          # For now, we'll assume versions are either manually updated before tagging,
-          # or we use a simpler find-and-replace for Cargo.toml files.
-          # This is a placeholder for a more robust versioning strategy.
-          # Example using sed (requires careful testing):
-          # find crates pyigloo -name "Cargo.toml" -o -name "pyproject.toml" | while read -r file; do
-          #   # For Cargo.toml version = "x.y.z"
-          #   sed -i -E "s/^version = \"[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?\"/version = \"${{ env.RELEASE_VERSION#v }}\"/" "$file"
-          #   # For pyproject.toml version = "x.y.z"
-          #   sed -i -E "s/^version = \"[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?\"/version = \"${{ env.RELEASE_VERSION#v }}\"/" "$file"
-          #   # For path dependencies like: some_crate = { path = "../some_crate", version = "0.1.0" }
-          #   # This is harder as it needs to match the dependency name.
-          # done
-          # echo "Version update attempt complete. Manual check recommended for complex cases."
-          # For now, we will proceed assuming versions are either pre-set or publishing will use existing versions.
-          # The `|| echo` in publish steps will catch failures if versions mismatch.
+          echo "Attempting to update crate versions to ${{ env.RELEASE_VERSION_NO_V }}"
+
+          find crates pyigloo -name "Cargo.toml" | while read -r file; do
+            echo "Processing $file..."
+            # Update [package] version
+            # This regex tries to match: version = "..." (with or without P semver suffixes like -alpha.1)
+            sed -i -E "s/^(version\s*=\s*\")[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\")/\1${{ env.RELEASE_VERSION_NO_V }}\3/" "$file"
+
+            # Update path dependencies for workspace members
+            # This is more complex and might need refinement. It assumes workspace members are igloo-*
+            # and that their dependency lines look like: igloo-xxx = { path = "...", version = "..." }
+            # We will list known workspace crates explicitly for more safety
+            WORKSPACE_CRATES=("igloo-common" "igloo-api" "igloo-engine" "igloo-cache" "igloo-cdc" "igloo-connector-filesystem" "igloo-connector-postgres" "igloo-connector-mysql" "igloo-coordinator" "igloo-worker" "igloo-client" "igloo")
+            for crate_name in "${WORKSPACE_CRATES[@]}"; do
+              # Matches: crate_name = { path = "...", version = "..." }
+              sed -i -E "s/^($crate_name\s*=\s*\{[^\}]*path\s*=\s*\"[^\"]*\",[^\}]*version\s*=\s*\")[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\"[^\}]*\})/\1${{ env.RELEASE_VERSION_NO_V }}\3/" "$file"
+              # Matches: crate_name = { version = "...", path = "..." } (order swapped)
+              sed -i -E "s/^($crate_name\s*=\s*\{[^\}]*version\s*=\s*\")[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\",\s*path\s*=\s*\"[^\"]*\"[^\}]*\})/\1${{ env.RELEASE_VERSION_NO_V }}\3/" "$file"
+            done
+          done
+
+          if [ -f "pyigloo/pyproject.toml" ]; then
+            echo "Processing pyigloo/pyproject.toml..."
+            sed -i -E "s/^(version\s*=\s*\")[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\")/\1${{ env.RELEASE_VERSION_NO_V }}\3/" "pyigloo/pyproject.toml"
+          fi
+
+          echo "Version update attempt complete. Review changes if possible (e.g., by adding a diff step for debugging)."
+          # Example: git diff # This would show changes if git is available and initialized
 
       - name: Publish Rust Crates
         env:
@@ -145,7 +164,7 @@ jobs:
         run: |
           CRATES_DIR="crates"
           PYIGLOO_DIR="pyigloo"
-          RELEASE_VERSION_NO_V="${{ env.RELEASE_VERSION#v }}" # Remove 'v' prefix if present
+          # RELEASE_VERSION_NO_V is now correctly set by the "Prepare clean release version string" step
 
           publish_crate() {
             local crate_path=$1
@@ -154,10 +173,10 @@ jobs:
             # Update version in Cargo.toml - this is a simplified approach
             # A more robust solution would use cargo-edit or similar tools
             # and handle workspace inheritance and dependency updates.
-            # sed -i "s/^version = \".*\"/version = \"$RELEASE_VERSION_NO_V\"/" "$crate_path/Cargo.toml"
+            # sed -i "s/^version = \".*\"/version = \"${{ env.RELEASE_VERSION_NO_V }}\"/" "$crate_path/Cargo.toml"
             # For now, we rely on Cargo.toml files being prepared or using --allow-dirty if changes are uncommitted.
 
-            echo "Publishing $crate_name (version $RELEASE_VERSION_NO_V)..."
+            echo "Publishing $crate_name (version ${{ env.RELEASE_VERSION_NO_V }})..."
             if cargo publish --manifest-path "$crate_path/Cargo.toml" --token "${CARGO_REGISTRY_TOKEN}" --allow-dirty; then
               echo "$crate_name published successfully."
             else

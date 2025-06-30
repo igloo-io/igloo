@@ -4,6 +4,14 @@
 // Re-export the generated proto code
 pub mod igloo {
     include!(concat!(env!("OUT_DIR"), "/igloo.rs")); // Defines FlightService trait
+    
+    // Include distributed query service
+    pub mod distributed {
+        include!(concat!(env!("OUT_DIR"), "/igloo.distributed.rs"));
+    }
+    
+    // Re-export distributed types at the top level for convenience
+    pub use distributed::*;
 }
 
 pub mod arrow {

@@ -18,9 +18,13 @@ Igloo is a high-performance, distributed SQL query engine built in Rust that mak
    cargo build --release
    ```
 
-3. **Quick Start with Docker:**
+3. **Quick Start with Sample Query:**
    ```bash
-   docker-compose up -d --build
+   # Run a simple local query
+   cargo run --bin igloo -- --sql "SELECT 42 as answer, 'Hello Igloo' as message"
+   
+   # Run a query against sample data
+   cargo run --bin igloo -- --sql "SELECT name, age FROM users WHERE age > 25"
    ```
 
 4. **Run Tests:**
@@ -32,7 +36,7 @@ Igloo is a high-performance, distributed SQL query engine built in Rust that mak
 
 ## ✨ Core Features
 
-* **🔗 Federated Queries**: Connect multiple data sources (PostgreSQL, MySQL, data lakes) and query them together in a single SQL statement
+* **🔗 Federated Queries**: Connect multiple data sources (PostgreSQL, MySQL, Parquet, Iceberg) and query them together
 * **⚡ Powered by Apache Arrow DataFusion**: Lightning-fast, extensible Rust-native query engine with rich optimizations
 * **🚀 High-Speed Transport**: Apache Arrow Flight SQL for client-server communication—significantly faster than ODBC/JDBC
 * **🧠 Intelligent Caching**: Transparent caching layer with automatic cache invalidation via Change Data Capture (CDC)
@@ -44,59 +48,26 @@ Igloo is a high-performance, distributed SQL query engine built in Rust that mak
 
 ## 🏗️ Architecture Overview
 
-Igloo uses a simple yet powerful coordinator-worker architecture:
+Igloo uses a coordinator-worker architecture with a sophisticated physical execution engine:
+
+### 🧠 Query Engine Core
+- **Physical Operators**: Optimized operators for scans, projections, filters, and hash joins
+- **Physical Planner**: Converts logical plans to executable physical plans
+- **Execution Engine**: Streams data through operator pipelines with minimal memory overhead
 
 ### 🧠 The Coordinator Node
 The brain of the cluster, responsible for:
 - **Client Connections**: Arrow Flight SQL endpoint for SQL query submission
 - **Query Planning**: Apache Arrow DataFusion-powered SQL parsing, planning, and optimization
-- **Smart Routing**: Decides between live database queries and cached data
+- **Fragment Generation**: Breaks complex queries into distributable fragments
 - **Cluster Management**: Real-time worker tracking and intelligent task scheduling
 
 ### 👷 Worker Nodes
 The hands of the cluster, each worker:
 - **Registers** with the Coordinator announcing available resources
-- **Executes** assigned query tasks using specialized connectors
+- **Executes** assigned query fragments using specialized connectors
 - **Processes** data in-memory with high-performance query engine
 - **Communicates** results between workers and back to the Coordinator
-
-### 🔄 Query Execution Flow
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Coordinator
-    participant Worker1
-    participant Worker2
-    participant Cache/DB
-
-    Client->>Coordinator: SQL Query via Flight SQL
-    Coordinator->>Coordinator: Parse & Plan (DataFusion)
-    Coordinator->>Coordinator: Check Cache Strategy
-    
-    par Distributed Execution
-        Coordinator->>Worker1: Task 1: Scan data partition A
-        Coordinator->>Worker2: Task 2: Scan data partition B
-    end
-    
-    par Data Fetching
-        Worker1->>Cache/DB: Fetch partition A
-        Worker2->>Cache/DB: Fetch partition B
-    end
-    
-    Worker1->>Coordinator: Results A
-    Worker2->>Coordinator: Results B
-    Coordinator->>Coordinator: Combine & Finialize
-    Coordinator->>Client: Final Results
-```
-
-**Example Query Execution:**
-1. User submits: `SELECT * FROM postgres_orders WHERE region = 'EMEA'`
-2. Coordinator checks catalog—discovers cached, up-to-date data available
-3. DataFusion planner creates optimized physical execution plan
-4. Scheduler distributes scan tasks across available workers
-5. Workers execute in parallel, filtering for 'EMEA' region
-6. Results stream back through Coordinator to client
 
 ---
 
@@ -104,90 +75,63 @@ sequenceDiagram
 
 ```
 igloo/
-├── 📡 api/                    # Protocol Buffers definitions
-├── 🦀 crates/                 # Core Rust packages
-│   ├── igloo-coordinator/     # 🧠 Coordinator node logic
-│   ├── igloo-worker/          # 👷 Worker node implementation  
-│   ├── igloo-engine/          # ⚙️ Core query processing (DataFusion)
-│   ├── igloo-cache/           # 💾 Caching layer
-│   └── connectors/            # 🔌 Data source plugins
-├── 🐍 python/                 # Python bindings
-├── 📚 docs/                   # Documentation & design decisions
-└── 💡 examples/               # Sample code & tutorials
+├── 📡 crates/api/              # Protocol Buffers & gRPC definitions
+├── 🦀 crates/engine/           # ⚙️ Core query processing engine
+│   ├── physical_plan.rs        # Physical plan representation
+│   ├── physical_planner.rs     # Logical to physical plan conversion
+│   └── operators/              # Physical operators (scan, join, etc.)
+├── 🧠 crates/coordinator/      # Coordinator node logic
+├── 👷 crates/worker/           # Worker node implementation  
+├── 🔌 crates/connectors/       # Data source plugins
+│   ├── filesystem/             # Parquet/CSV file connector
+│   ├── iceberg/               # Apache Iceberg connector
+│   ├── postgres/              # PostgreSQL connector
+│   └── mysql/                 # MySQL connector
+├── 💾 crates/cache/           # Caching layer
+├── 🐍 pyigloo/               # Python bindings
+└── 📚 docs/                  # Documentation & design decisions
 ```
 
 ---
 
 ## 🚀 Getting Started
 
-### Option 1: Docker Compose (Recommended)
+### Local Development
 
-The easiest way to get Igloo running with all dependencies:
-
-```bash
-# Start Igloo cluster with PostgreSQL
-docker-compose up -d --build
-
-# View logs
-docker-compose logs -f igloo
-
-# Stop services
-docker-compose down
-```
-
-### Option 2: Local Development
-
-For development and customization:
-
-1. **Prerequisites:**
-   * Rust toolchain (see `rust-toolchain.toml`)
-   * Protocol Buffers Compiler (`protoc`)
-   * Running PostgreSQL instance
-   * ADBC drivers (see environment configuration below)
-
-2. **Configure Environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database connections and paths
-   ```
-
-3. **Build and Run:**
+1. **Build the project:**
    ```bash
    cargo build --release
-   cargo run
    ```
 
----
+2. **Run sample queries:**
+   ```bash
+   # Simple query
+   cargo run --bin igloo -- --sql "SELECT 42 as answer"
+   
+   # Query with sample data
+   cargo run --bin igloo -- --sql "SELECT name FROM users WHERE age > 30"
+   ```
 
-## ⚙️ Configuration
+3. **Run tests:**
+   ```bash
+   # Unit tests
+   cargo test
+   
+   # Integration tests
+   cargo test --test integration_test
+   ```
 
-Igloo is configured via environment variables. Copy `.env.example` to `.env` for local development.
+### Distributed Mode (Coming Soon)
 
-### 🔗 Database Connections
 ```bash
-# Primary PostgreSQL connection
-DATABASE_URL=postgres://user:password@localhost:5432/mydb
+# Start coordinator
+cargo run --bin igloo-coordinator
 
-# Alternative format
-IGLOO_POSTGRES_URI=host=localhost user=postgres password=postgres dbname=mydb
-```
+# Start workers
+cargo run --bin igloo-worker -- --coordinator http://localhost:50051
 
-### 📂 Data Paths
-```bash
-# Parquet/Iceberg data location
-IGLOO_PARQUET_PATH=./dummy_iceberg_cdc/
-
-# CDC monitoring path
-IGLOO_CDC_PATH=./dummy_iceberg_cdc/
-```
-
-### 🔧 ADBC Drivers (Local Development)
-```bash
-# Required for local execution (not needed in Docker)
-export LD_LIBRARY_PATH=/path/to/adbc/drivers:$LD_LIBRARY_PATH
-
-# For integration tests
-TEST_ADBC_POSTGRESQL_URI=postgresql://user:password@localhost:5432/test_db
+# Execute distributed query
+cargo run --bin igloo -- --distributed --sql "SELECT * FROM large_table"
 ```
 
 ---
@@ -196,61 +140,78 @@ TEST_ADBC_POSTGRESQL_URI=postgresql://user:password@localhost:5432/test_db
 
 ### Rust API
 ```rust
-use igloo::{Coordinator, WorkerConfig};
-use tokio;
+use igloo_engine::QueryEngine;
+use datafusion::arrow::util::pretty::print_batches;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Start coordinator
-    let coordinator = Coordinator::new("0.0.0.0:50051").await?;
+    let engine = QueryEngine::new();
     
-    // Execute federated query
-    let results = coordinator.execute_sql(
-        "SELECT o.order_id, c.customer_name 
-         FROM postgres_orders o 
-         JOIN lakehouse_customers c ON o.customer_id = c.id 
-         WHERE o.created_at > '2024-01-01'"
-    ).await?;
+    // Execute SQL query
+    let results = engine.execute("SELECT 42 as answer").await;
     
-    println!("Query results: {:?}", results);
+    // Print results
+    print_batches(&results)?;
+    
     Ok(())
 }
 ```
 
-### Python Bindings
-```python
-import igloo
+### Physical Plan Execution
+```rust
+use igloo_engine::{PhysicalPlanner, QueryEngine};
+use datafusion::execution::context::SessionContext;
+use igloo_common::catalog::MemoryCatalog;
 
-# Connect to Igloo cluster
-client = igloo.connect("grpc://localhost:50051")
-
-# Execute SQL with automatic caching
-df = client.sql("""
-    SELECT region, SUM(revenue) as total_revenue
-    FROM sales_data 
-    WHERE date >= '2024-01-01'
-    GROUP BY region
-    ORDER BY total_revenue DESC
-""")
-
-print(df.to_pandas())
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let catalog = Arc::new(MemoryCatalog::new());
+    let session_ctx = Arc::new(SessionContext::new());
+    let planner = PhysicalPlanner::new(catalog, session_ctx.clone());
+    
+    // Parse SQL to logical plan
+    let logical_plan = session_ctx.sql("SELECT * FROM my_table").await?.into_optimized_plan()?;
+    
+    // Convert to physical plan
+    let physical_plan = planner.create_physical_plan(&logical_plan).await?;
+    
+    // Execute and stream results
+    let mut stream = physical_plan.execute().await?;
+    while let Some(batch) = stream.next().await {
+        println!("Batch: {:?}", batch?);
+    }
+    
+    Ok(())
+}
 ```
 
 ---
 
 ## 🎯 Current Features
 
-* ⚡ **Fast SQL Execution** with Apache DataFusion
-* 🍙 **Distributed Processing** across multiple nodes  
-* 🧊 **Smart Result Caching** with query fingerprinting
-* 🔄 **CDC-Driven Cache Invalidation** from Iceberg change logs
-* 🔗 **Cross-Source Joins** between PostgreSQL and Arrow datasets
-* 🛡️ **Memory Safety** guaranteed by Rust
-* 📊 **Arrow Flight SQL** for high-performance client communication
+### Phase 1: Single-Node Execution ✅
+* ⚡ **Physical Operators**: ParquetScan, Projection, Filter, HashJoin
+* 🧠 **Physical Planner**: Converts DataFusion logical plans to executable physical plans
+* 🔄 **Streaming Execution**: Memory-efficient streaming of query results
+* 📊 **Arrow Integration**: Native Arrow RecordBatch processing
+
+### Phase 2: Distributed Execution 🚧
+* 🌐 **Query Fragmentation**: Break queries into distributable fragments
+* 📡 **gRPC Communication**: Coordinator-worker communication via Protocol Buffers
+* 🔗 **Cross-Source Joins**: Distributed joins between different data sources
+* 🧊 **Iceberg Support**: Read from Apache Iceberg tables
 
 ---
 
 ## 🛤️ Roadmap
+
+### Immediate (Current Sprint)
+- [x] 🏗️ **Physical Operators** (Scan, Project, Filter, Join)
+- [x] 🧠 **Physical Planner** 
+- [x] ⚡ **Single-Node Execution Engine**
+- [ ] 🌐 **Distributed Query Fragments**
+- [ ] 📡 **Worker Communication Protocol**
+- [ ] 🧊 **Iceberg Connector**
 
 ### Near Term
 - [ ] 🌐 **REST API** for easier client integration
@@ -264,6 +225,26 @@ print(df.to_pandas())
 - [ ] 📦 **Persistent Cache Backends** (RocksDB, Redis)
 - [ ] 🔐 **Advanced Security & Auth**
 - [ ] 📈 **Auto-scaling** based on query patterns
+
+---
+
+## 🧪 Testing
+
+Run the comprehensive test suite:
+
+```bash
+# All tests
+cargo test
+
+# Engine tests only
+cargo test -p igloo-engine
+
+# Integration tests
+cargo test --test integration_test
+
+# With output
+cargo test -- --nocapture
+```
 
 ---
 
