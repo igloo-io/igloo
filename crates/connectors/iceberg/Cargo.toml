@@ -1,23 +1,24 @@
 [package]
-name = "igloo-engine"
+name = "igloo-connector-iceberg"
 version = "0.1.0"
 edition = "2021"
 authors = ["Igloo Team <team@example-igloo.com>"]
-description = "Query engine core for the Igloo Query Engine."
+description = "Apache Iceberg connector for the Igloo Query Engine."
 license = "Apache-2.0"
 repository = "https://github.com/igloo-io/igloo"
-publish = false # Cannot be published due to local path dependencies (datafusion_engine)
+publish = true
 
 [dependencies]
-igloo-common = { path = "../common" }
+igloo-common = { path = "../../common" }
+igloo-engine = { path = "../../engine" }
 tokio = { workspace = true, features = ["full"] }
 tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
-sqlparser = "0.56.0"
-datafusion = "48.0.0"
 arrow = "55.1.0"
 parquet = "55.1.0"
 async-trait = "0.1"
 futures = "0.3"
 tokio-stream = "0.1"
+# Note: apache-iceberg crate is not yet stable, so we'll implement a basic version
+# iceberg = "0.1"

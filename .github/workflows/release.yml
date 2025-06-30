@@ -1,0 +1,222 @@
+name: Release Pipeline
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+
+      - name: Install Maturin
+        run: pip install maturin
+
+      # Cache Rust dependencies
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust dependencies
+        run: cargo build --release # This will download and build dependencies
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Restore cached Rust dependencies
+      - name: Restore Rust dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run linters
+        run: |
+          cargo clippy -- -D warnings
+          cargo fmt -- --check
+
+      - name: Run tests
+        run: cargo test --all-features --all-targets
+
+  release:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # Fetch all history for all tags and branches
+          fetch-depth: 0
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+
+      - name: Install Maturin
+        run: pip install maturin
+
+      # Restore cached Rust dependencies
+      - name: Restore Rust dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Get release version
+        id: get_version
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Prepare clean release version string
+        id: prep_version
+        run: |
+          VERSION=${{ env.RELEASE_VERSION }}
+          if [[ "${VERSION}" == v* ]]; then
+            VERSION="${VERSION#v}"
+          fi
+          echo "RELEASE_VERSION_NO_V=$VERSION" >> $GITHUB_ENV
+          echo "Prepared version string: $VERSION"
+
+      - name: Update crate versions
+        run: |
+          echo "Attempting to update crate versions to ${{ env.RELEASE_VERSION_NO_V }}"
+
+          find crates pyigloo -name "Cargo.toml" | while read -r file; do
+            echo "Processing $file..."
+            # Update [package] version
+            # This regex tries to match: version = "..." (with or without P semver suffixes like -alpha.1)
+            sed -i -E "s/^(version\s*=\s*\")[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\")/\1${{ env.RELEASE_VERSION_NO_V }}\3/" "$file"
+
+            # Update path dependencies for workspace members
+            # This is more complex and might need refinement. It assumes workspace members are igloo-*
+            # and that their dependency lines look like: igloo-xxx = { path = "...", version = "..." }
+            # We will list known workspace crates explicitly for more safety
+            WORKSPACE_CRATES=("igloo-common" "igloo-api" "igloo-engine" "igloo-cache" "igloo-cdc" "igloo-connector-filesystem" "igloo-connector-postgres" "igloo-connector-mysql" "igloo-coordinator" "igloo-worker" "igloo-client" "igloo")
+            for crate_name in "${WORKSPACE_CRATES[@]}"; do
+              # Matches: crate_name = { path = "...", version = "..." }
+              sed -i -E "s/^($crate_name\s*=\s*\{[^\}]*path\s*=\s*\"[^\"]*\",[^\}]*version\s*=\s*\")[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\"[^\}]*\})/\1${{ env.RELEASE_VERSION_NO_V }}\3/" "$file"
+              # Matches: crate_name = { version = "...", path = "..." } (order swapped)
+              sed -i -E "s/^($crate_name\s*=\s*\{[^\}]*version\s*=\s*\")[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\",\s*path\s*=\s*\"[^\"]*\"[^\}]*\})/\1${{ env.RELEASE_VERSION_NO_V }}\3/" "$file"
+            done
+          done
+
+          if [ -f "pyigloo/pyproject.toml" ]; then
+            echo "Processing pyigloo/pyproject.toml..."
+            sed -i -E "s/^(version\s*=\s*\")[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\")/\1${{ env.RELEASE_VERSION_NO_V }}\3/" "pyigloo/pyproject.toml"
+          fi
+
+          echo "Version update attempt complete. Review changes if possible (e.g., by adding a diff step for debugging)."
+          # Example: git diff # This would show changes if git is available and initialized
+
+      - name: Publish Rust Crates
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          CRATES_DIR="crates"
+          PYIGLOO_DIR="pyigloo"
+          # RELEASE_VERSION_NO_V is now correctly set by the "Prepare clean release version string" step
+
+          publish_crate() {
+            local crate_path=$1
+            local crate_name=$2
+            echo "Processing $crate_name from $crate_path..."
+            # Update version in Cargo.toml - this is a simplified approach
+            # A more robust solution would use cargo-edit or similar tools
+            # and handle workspace inheritance and dependency updates.
+            # sed -i "s/^version = \".*\"/version = \"${{ env.RELEASE_VERSION_NO_V }}\"/" "$crate_path/Cargo.toml"
+            # For now, we rely on Cargo.toml files being prepared or using --allow-dirty if changes are uncommitted.
+
+            echo "Publishing $crate_name (version ${{ env.RELEASE_VERSION_NO_V }})..."
+            if cargo publish --manifest-path "$crate_path/Cargo.toml" --token "${CARGO_REGISTRY_TOKEN}" --allow-dirty; then
+              echo "$crate_name published successfully."
+            else
+              echo "Failed to publish $crate_name. It might already exist at this version or there was another issue."
+              # Optionally, exit 1 here to fail the workflow if a publish fails
+            fi
+            # Add a small delay to allow the registry to update
+            sleep 10
+          }
+
+          # Ordered list of crates to publish
+          # igloo-engine is commented out due to local path dependencies for datafusion_engine
+          # This needs to be resolved (e.g., publish datafusion_engine or vendor it) before igloo-engine can be published.
+
+          publish_crate "$CRATES_DIR/common" "igloo-common"
+          publish_crate "$CRATES_DIR/api" "igloo-api"
+          # publish_crate "$CRATES_DIR/engine" "igloo-engine" # Has local path deps
+          publish_crate "$CRATES_DIR/cache" "igloo-cache"
+          publish_crate "$CRATES_DIR/cdc" "igloo-cdc"
+          publish_crate "$CRATES_DIR/connectors/filesystem" "igloo-connector-filesystem"
+          publish_crate "$CRATES_DIR/connectors/postgres" "igloo-connector-postgres"
+          publish_crate "$CRATES_DIR/connectors/mysql" "igloo-connector-mysql"
+          publish_crate "$CRATES_DIR/coordinator" "igloo-coordinator"
+          publish_crate "$CRATES_DIR/worker" "igloo-worker"
+          publish_crate "$CRATES_DIR/client" "igloo-client"
+          publish_crate "$CRATES_DIR/igloo" "igloo" # The new main crate
+
+      - name: Build and publish Python package
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          # Maturin uses the version from pyigloo/Cargo.toml if not specified otherwise.
+          # Ensure pyigloo/Cargo.toml's version is updated, or use an override.
+          # For consistency, pyigloo's Cargo.toml version should also be updated by the versioning step.
+        run: |
+          cd pyigloo
+          # The version in pyproject.toml should ideally be updated by the release tag.
+          # For now, maturin build will use the version from pyproject.toml.
+          # Consider using a tool like `poetry version` or `sed` to update version before building.
+          maturin publish --username __token__ --password $PYPI_API_TOKEN
+          # Or if you prefer to build wheels first and then publish:
+          # maturin build --release
+          # pip install twine
+          # twine upload --username __token__ --password $PYPI_API_TOKEN target/wheels/*

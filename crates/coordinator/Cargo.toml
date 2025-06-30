@@ -2,8 +2,14 @@
 name = "igloo-coordinator"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igloo Team <team@example-igloo.com>"]
+description = "Coordinator component for the Igloo Query Engine."
+license = "Apache-2.0"
+repository = "https://github.com/igloo-io/igloo"
+publish = true
 
 [dependencies]
+arrow = "55.1.0"
 arrow-array = "55.1.0"
 arrow-flight = "55.1.0"
 arrow-schema = "55.1.0"
@@ -13,6 +19,7 @@ datafusion = "48.0.0"
 igloo-api = { path = "../api" }
 igloo-common = { path = "../common" }
 igloo-connector-filesystem = { path = "../connectors/filesystem" }
+igloo-connector-iceberg = { path = "../connectors/iceberg" }
 igloo-engine = { path = "../engine" }
 object_store = "0.9"
 prost = { workspace = true }
@@ -21,3 +28,4 @@ tokio = { workspace = true }
 tonic = { workspace = true }
 futures = "0.3"
 tokio-stream = "0.1"
+uuid = { version = "1", features = ["v4"] }

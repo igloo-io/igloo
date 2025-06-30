@@ -2,6 +2,11 @@
 name = "igloo-common"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igloo Team <team@example-igloo.com>"]
+description = "Common utilities and types for the Igloo Query Engine."
+license = "Apache-2.0"
+repository = "https://github.com/igloo-io/igloo"
+publish = true
 
 [dependencies]
 tokio = { workspace = true }
@@ -10,3 +15,4 @@ prost = { workspace = true }
 prost-types = { workspace = true }
 thiserror = "2.0"
 sqlparser = "0.56.0"
+datafusion = "48.0.0"

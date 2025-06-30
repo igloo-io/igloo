@@ -8,6 +8,7 @@ fn main() {
             &[
                 "proto/coordinator.proto",
                 "proto/client_flight.proto",
+                "proto/distributed.proto",
                 "proto/arrow/flight/protocol/flight.proto",
             ],
             &["proto", "proto/arrow/flight/protocol"],
