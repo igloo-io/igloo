@@ -8,10 +8,14 @@ use igloo_engine::QueryEngine;
 use std::path::Path;
 use std::sync::Arc;
 
-mod service;
+// service and catalog modules are now part of the library, exposed by lib.rs
+// main.rs will use them through the igloo_coordinator crate itself.
+// No longer: mod service;
 
 use arrow_flight::flight_service_server::FlightServiceServer;
 use igloo_api::IglooFlightSqlService;
+// If main.rs needed items from service module, it would be:
+// use igloo_coordinator::service::MyCoordinatorService;
 use igloo_common::catalog::MemoryCatalog;
 use std::net::SocketAddr;
 use tonic::transport::Server;

@@ -1,5 +1,4 @@
-//! Coordinator crate for distributed query execution
-
+pub mod catalog;
 pub mod service;
 pub mod fragment;
 pub mod distributed_planner;

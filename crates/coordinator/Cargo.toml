@@ -22,6 +22,8 @@ igloo-connector-filesystem = { path = "../connectors/filesystem" }
 igloo-connector-iceberg = { path = "../connectors/iceberg" }
 object_store = "0.9"
 arrow-flight = "55.1.0"
+dashmap = "5.5" # For concurrent hash maps
+arrow-schema = "55.1.0" # For SchemaRef
 arrow = "55.1.0"
 futures = "0.3"
 tokio-stream = "0.1"
