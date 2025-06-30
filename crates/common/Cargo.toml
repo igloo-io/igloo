@@ -9,10 +9,10 @@ repository = "https://github.com/igloo-io/igloo"
 publish = true
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-tonic = "0.12"
-prost = "0.13"
-prost-types = "0.13"
+tokio = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
 thiserror = "2.0"
 sqlparser = "0.56.0"
 datafusion = "48.0.0"

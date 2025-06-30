@@ -1,6 +1,7 @@
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::util::pretty::print_batches;
 use datafusion::datasource::file_format::csv::CsvFormat;
+use datafusion::datasource::file_format::parquet::ParquetFormat;
 use datafusion::datasource::listing::{
     ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
 };
@@ -10,12 +11,14 @@ use std::sync::Arc;
 
 mod service;
 
+use crate::flight::BasicFlightServiceImpl; // Added
 use arrow_flight::flight_service_server::FlightServiceServer;
 use igloo_api::IglooFlightSqlService;
 use igloo_common::catalog::MemoryCatalog;
 use std::net::SocketAddr;
 use tonic::transport::Server;
 
+mod flight;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Instantiate the query engine and catalog
