@@ -1,10 +1,10 @@
-use arrow_flight::{
-    flight_service_server::FlightService, Action, ActionType, Criteria, Empty, FlightData,
-    FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse, PutResult, SchemaResult,
-    Ticket, PollInfo
-};
 use arrow_array::{Int32Array, RecordBatch};
 use arrow_flight::utils;
+use arrow_flight::{
+    flight_service_server::FlightService, Action, ActionType, Criteria, Empty, FlightData,
+    FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse, PollInfo, PutResult,
+    SchemaResult, Ticket,
+};
 use arrow_schema::{DataType, Field, Schema};
 use futures::Stream;
 use std::pin::Pin;
@@ -64,14 +64,20 @@ impl FlightService for BasicFlightServiceImpl {
         &self,
         _request: Request<FlightDescriptor>, // Ignoring descriptor for now
     ) -> Result<Response<SchemaResult>, Status> {
-        let schema = Arc::new(Schema::new(vec![Field::new(
-            "result",
-            DataType::Int32,
-            false,
-        )]));
+        let schema = Arc::new(Schema::new(vec![Field::new("result", DataType::Int32, false)]));
 
-        let schema_result = utils::schema_to_schema_result(schema.as_ref(), &arrow_flight::IpcMessage(vec![])) // Second arg is options, can be default
-            .map_err(|e| Status::internal(format!("Failed to convert schema to SchemaResult: {}", e)))?;
+        // Serialize schema to bytes using arrow-ipc (modern way)
+        use arrow_ipc::writer::{DictionaryTracker, IpcDataGenerator, IpcWriteOptions};
+        let options = IpcWriteOptions::default();
+        let mut dictionary_tracker = DictionaryTracker::new(false);
+
+        let schema_encoded = IpcDataGenerator::default().schema_to_bytes_with_dictionary_tracker(
+            schema.as_ref(),
+            &mut dictionary_tracker,
+            &options,
+        );
+
+        let schema_result = SchemaResult { schema: schema_encoded.ipc_message.into() };
 
         Ok(Response::new(schema_result))
     }
@@ -80,11 +86,7 @@ impl FlightService for BasicFlightServiceImpl {
         &self,
         _request: Request<Ticket>, // Ignoring ticket for now
     ) -> Result<Response<Self::DoGetStream>, Status> {
-        let schema = Arc::new(Schema::new(vec![Field::new(
-            "result",
-            DataType::Int32,
-            false,
-        )]));
+        let schema = Arc::new(Schema::new(vec![Field::new("result", DataType::Int32, false)]));
         let array = Arc::new(Int32Array::from(vec![1]));
         let batch = RecordBatch::try_new(schema.clone(), vec![array])
             .map_err(|e| Status::internal(format!("Failed to create RecordBatch: {}", e)))?;
@@ -93,10 +95,16 @@ impl FlightService for BasicFlightServiceImpl {
 
         // Spawn a task to send FlightData
         tokio::spawn(async move {
-            let flight_data_vec = match utils::batches_to_flight_data(schema.as_ref(), vec![batch]) {
+            let flight_data_vec = match utils::batches_to_flight_data(schema.as_ref(), vec![batch])
+            {
                 Ok(data) => data,
                 Err(e) => {
-                    let _ = tx.send(Err(Status::internal(format!("Failed to convert batch to FlightData: {}", e)))).await;
+                    let _ = tx
+                        .send(Err(Status::internal(format!(
+                            "Failed to convert batch to FlightData: {}",
+                            e
+                        ))))
+                        .await;
                     return;
                 }
             };
@@ -109,9 +117,7 @@ impl FlightService for BasicFlightServiceImpl {
             }
         });
 
-        Ok(Response::new(
-            Box::pin(ReceiverStream::new(rx)) as Self::DoGetStream
-        ))
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::DoGetStream))
     }
 
     async fn do_put(

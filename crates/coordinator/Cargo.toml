@@ -7,6 +7,7 @@ edition = "2021"
 arrow-array = "55.1.0"
 arrow-flight = "55.1.0"
 arrow-schema = "55.1.0"
+arrow-ipc = "55.1.0"
 chrono = "0.4"
 datafusion = "48.0.0"
 igloo-api = { path = "../api" }
@@ -14,7 +15,9 @@ igloo-common = { path = "../common" }
 igloo-connector-filesystem = { path = "../connectors/filesystem" }
 igloo-engine = { path = "../engine" }
 object_store = "0.9"
-prost = "0.13"
-prost-types = "0.13"
-tokio = { version = "1", features = ["full"] }
-tonic = "0.12"
+prost = { workspace = true }
+prost-types = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+futures = "0.3"
+tokio-stream = "0.1"

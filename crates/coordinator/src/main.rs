@@ -1,6 +1,7 @@
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::util::pretty::print_batches;
 use datafusion::datasource::file_format::csv::CsvFormat;
+use datafusion::datasource::file_format::parquet::ParquetFormat;
 use datafusion::datasource::listing::{
     ListingOptions, ListingTable, ListingTableConfig, ListingTableUrl,
 };
@@ -10,8 +11,8 @@ use std::sync::Arc; // For path operations
 
 mod service;
 
-use arrow_flight::flight_service_server::FlightServiceServer;
 use crate::flight::BasicFlightServiceImpl; // Added
+use arrow_flight::flight_service_server::FlightServiceServer;
 use std::net::SocketAddr;
 use tonic::transport::Server;
 
@@ -44,6 +45,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let table_provider = Arc::new(ListingTable::try_new(config)?);
     engine.register_table("test_table", table_provider)?;
     println!("Registered test_table successfully.");
+
+    // Register a Parquet file as a table
+    let parquet_path = base_path.join("path/to/your_file.parquet");
+    let parquet_url = ListingTableUrl::parse(format!("file://{}", parquet_path.display()))?;
+    let parquet_config = ListingTableConfig::new(parquet_url).with_listing_options(
+        ListingOptions::new(Arc::new(ParquetFormat::default())).with_file_extension(".parquet"),
+    );
+    let parquet_table = Arc::new(ListingTable::try_new(parquet_config)?);
+    engine.register_table("parquet_table", parquet_table)?;
 
     // 3. Execute a simple query
     let sql = "SELECT col_a, col_b FROM test_table LIMIT 5;";

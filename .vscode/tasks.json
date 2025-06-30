@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Start Igloo Coordinator Server",
+			"command": "cargo run --bin igloo-coordinator",
+			"isBackground": true,
+			"group": "build"
+		}
+	]
+}
